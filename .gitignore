@@ -1,0 +1,32 @@
+# BACKEND
+venv/
+__pycache__/
+*.py[cod]
+*.sqlite3
+.env
+db.sqlite3
+staticfiles/
+media/
+
+# FRONTEND
+node_modules/
+build/
+dist/
+coverage/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# DOCKER
+*.pid
+*.seed
+*.pid.lock
+
+# SYSTEM / IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
