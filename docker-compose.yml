@@ -17,6 +17,8 @@ services:
   backend:
     build:
       context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
     container_name: epitime_backend
     command: >
       sh -c "python manage.py migrate &&
@@ -29,6 +31,15 @@ services:
       - db
     env_file:
       - ./backend/.env
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+
 
 volumes:
   postgres_data:
