@@ -1,7 +1,17 @@
-FROM node:latest as builder
+# ---- Frontend Dockerfile ----
+FROM node:20-alpine
+
+# Répertoire de travail
 WORKDIR /app
-COPY . .
+
+# Copie des fichiers de dépendances
+COPY package*.json ./
+
+# Installation des dépendances
 RUN npm install
-RUN npm run build
-FROM nginx:alpine
-COPY --from=builder /app/build /usr/share/nginx/html
+
+# Copie du reste du projet React
+COPY . .
+
+# Lancement du serveur React
+CMD ["npm", "start"]
