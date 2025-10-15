@@ -6,17 +6,17 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-# Load .env variables
+# Load environment variables
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY
+# === SECURITY ===
 SECRET_KEY = os.getenv('SECRET_KEY', 'unsafe-default-key')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
-# APPS
+# === APPS ===
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -24,15 +24,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',  # Django REST Framework
-    'corsheaders',     # For React connection
+    'rest_framework',
+    'corsheaders',
 ]
 
-# MIDDLEWARE
+# === MIDDLEWARE ===
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # Important: before CommonMiddleware
+    'corsheaders.middleware.CorsMiddleware',  # Important : doit être avant CommonMiddleware
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -59,14 +59,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'api.wsgi.application'
 
-# DATABASE CONFIG (PostgreSQL)
+# === DATABASE CONFIG (MariaDB) ===
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.getenv('DB_NAME', 'epitime'),
         'USER': os.getenv('DB_USER', 'epitime_user'),
         'PASSWORD': os.getenv('DB_PASSWORD', 'epitime_pass'),
-        'HOST': os.getenv('DB_HOST', 'db'),
+        'HOST': os.getenv('DB_HOST', 'db'),  # nom du service Docker
         'PORT': os.getenv('DB_PORT', '3306'),
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
@@ -74,7 +74,7 @@ DATABASES = {
     }
 }
 
-# PASSWORD VALIDATION
+# === PASSWORD VALIDATION ===
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -82,17 +82,17 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# LANGUAGE / TIMEZONE
+# === LANGUAGE & TIMEZONE ===
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Europe/Paris'
 USE_I18N = True
 USE_TZ = True
 
-# STATIC FILES
+# === STATIC FILES ===
 STATIC_URL = 'static/'
 
-# DEFAULT AUTO FIELD
+# === DEFAULT AUTO FIELD ===
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS (allow frontend access)
+# === CORS (Frontend React) ===
 CORS_ALLOW_ALL_ORIGINS = True

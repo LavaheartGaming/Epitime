@@ -1,5 +1,5 @@
 Django>=5.0
 djangorestframework
-django-cors-headers
 mysqlclient
 python-dotenv
+django-cors-headers
