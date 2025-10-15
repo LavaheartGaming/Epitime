@@ -2,33 +2,50 @@ version: "3.9"
 
 services:
   db:
-    image: postgres:15
-    container_name: epitime_db
+    image: mariadb:11
+    container_name: epitime-db-1
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: epitime
+      MYSQL_USER: epitime_user
+      MYSQL_PASSWORD: epitime_pass
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   backend:
-    build:
-      context: ./backend
-    container_name: epitime_backend
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+    build: ./backend
+    container_name: epitime-backend-1
     volumes:
       - ./backend:/app
     ports:
       - "8000:8000"
     depends_on:
       - db
-    env_file:
-      - ./backend/.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=api.settings
+      - DB_NAME=epitime
+      - DB_USER=epitime_user
+      - DB_PASSWORD=epitime_pass
+      - DB_HOST=db
+      - DB_PORT=3306
+
+  frontend:
+    build: ./frontend
+    container_name: epitime-frontend-1
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    stdin_open: true
+    tty: true
 
 volumes:
-  postgres_data:
+  mariadb_data:
