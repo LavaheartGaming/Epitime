@@ -31,6 +31,7 @@ export default function LoginPage() {
   const [notificationMessage, setNotificationMessage] = useState(""); 
 
   const [formData, setFormData] = useState({
+    phone_number: "",
     name: "",
     email: "",
     password: "",
@@ -145,6 +146,30 @@ export default function LoginPage() {
             </div>
           </div>
 
+           {!isLogin && (
+           <div>
+            <label className="block text-sm mb-2">phone number</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
+              <input
+                type="tel"
+                name="phone_number"
+                value={formData.phone_number}
+                onChange={handleChange}
+                required
+                placeholder="+69 696969696"
+                onInvalid={(e) =>
+                  (e.target as HTMLInputElement).setCustomValidity("Please enter a valid phone number.")
+                }
+                onInput={(e) =>
+                  (e.target as HTMLInputElement).setCustomValidity("")
+                }
+                className="w-full pl-10 pr-4 py-3 bg-blue-900/50 border border-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              />
+            </div>
+          </div>
+          )}
+
           <div>
             <label className="block text-sm mb-2">Password</label>
             <div className="relative">
@@ -175,8 +200,8 @@ export default function LoginPage() {
           </div>
 
           {!isLogin && (
-            <div>
-              <label className="block text-sm mb-2">Confirm Password</label>
+          <div>
+            <label className="block text-sm mb-2">Confirm Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
                 <input
