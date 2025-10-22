@@ -3,6 +3,8 @@ from django.db import models
 
 class User(AbstractUser):
     phone_number = models.CharField(max_length=20, unique=True, null=False, blank=False)
+    email = models.EmailField(unique=True)
+    two_factor_enabled = models.BooleanField(default=False)  # ✅ ajouté pour le 2FA
 
     ROLE_CHOICES = [
         ('user', 'User'),
