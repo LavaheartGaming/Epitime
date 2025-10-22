@@ -8,12 +8,13 @@ ENV PYTHONUNBUFFERED=1
 # Répertoire de travail
 WORKDIR /app
 
-# Installation des dépendances système nécessaires à mysqlclient
+# Installation des dépendances système nécessaires à mysqlclient + netcat
 RUN apt-get update && apt-get install -y \
     pkg-config \
     default-libmysqlclient-dev \
     build-essential \
-    && rm -rf /var/lib/apt/lists/*
+    netcat-traditional \
+ && rm -rf /var/lib/apt/lists/*
 
 # Copie des dépendances Python
 COPY requirements.txt .
@@ -21,8 +22,15 @@ COPY requirements.txt .
 # Installation des dépendances Python
 RUN pip install --no-cache-dir -r requirements.txt
 
+# ✅ Installation de JWT pour l’authentification
+RUN pip install djangorestframework-simplejwt
+
 # Copie du code Django
 COPY . .
 
 # Commande par défaut : attente + migration + lancement du serveur
-CMD sh -c "echo '⏳ Waiting for MariaDB...' && sleep 10 && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+CMD sh -c "echo '⏳ Waiting for MariaDB...' && \
+    until nc -z db 3306; do echo '⏳ Waiting for DB...'; sleep 2; done && \
+    echo '✅ MariaDB is ready. Starting Django...' && \
+    python manage.py migrate && \
+    python manage.py runserver 0.0.0.0:8000"

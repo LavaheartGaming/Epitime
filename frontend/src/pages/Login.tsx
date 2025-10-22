@@ -1,12 +1,17 @@
 import React, { useState } from "react";
-// Importation pour la navigation React Router (remplace useRouter de Next.js)
-import { useNavigate } from "react-router-dom"; 
-import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Mail, Lock, User, Eye, EyeOff, Phone } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
-// Composant de notification pour remplacer alert()
-function NotificationModal({ message, onClose }: { message: string, onClose: () => void }) {
+// ✅ Composant de notification modale
+function NotificationModal({
+  message,
+  onClose,
+}: {
+  message: string;
+  onClose: () => void;
+}) {
   if (!message) return null;
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
       <div className="bg-blue-900 border border-yellow-400 rounded-xl p-6 shadow-2xl max-w-sm w-full text-center">
@@ -24,11 +29,13 @@ function NotificationModal({ message, onClose }: { message: string, onClose: () 
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
-  // État pour gérer les messages de notification/erreur
-  const [notificationMessage, setNotificationMessage] = useState(""); 
+  const [notificationMessage, setNotificationMessage] = useState("");
 
   const [formData, setFormData] = useState({
     phone_number: "",
@@ -43,55 +50,70 @@ export default function LoginPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isLogin && !acceptTerms) {
-      setNotificationMessage("You must accept the terms and conditions to continue.");
-      return;
-    }
+    const endpoint = isLogin
+      ? `${API_URL}/api/users/login/`
+      : `${API_URL}/api/users/register/`;
 
-    if (!isLogin && formData.password !== formData.confirmPassword) {
-      setNotificationMessage("Passwords do not match.");
-      return;
-    }
+    const payload = isLogin
+      ? { email: formData.email, password: formData.password }
+      : {
+          username: formData.name,
+          email: formData.email,
+          password: formData.password,
+          phone_number: formData.phone_number,
+        };
 
-    if (isLogin) {
-      setNotificationMessage("✅ Login successful!");
-      // Remplacement de router.push() par navigate()
-      setTimeout(() => {
-        setNotificationMessage("");
-        navigate("/dashboard");
-      }, 1500);
-      
-    } else {
-      setNotificationMessage("✅ Account created successfully!");
-      // Remplacement de router.push() par navigate()
-      setTimeout(() => {
-        setNotificationMessage("");
-        navigate("/home");
-      }, 1500);
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setNotificationMessage(
+          isLogin ? "✅ Login successful!" : "✅ Account created successfully!"
+        );
+
+        if (isLogin && data.access && data.user) {
+          localStorage.setItem("access_token", data.access);
+          login(data.user);
+        }
+
+        setTimeout(() => navigate("/account"), 1000);
+      } else {
+        setNotificationMessage(
+          data.error ||
+            data.detail ||
+            "❌ Invalid credentials or incomplete fields."
+        );
+      }
+    } catch {
+      setNotificationMessage("⚠️ Server unreachable. Try again later.");
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center text-white px-4 py-10">
-      
-      {/* Composant de notification */}
-      <NotificationModal 
-        message={notificationMessage} 
-        onClose={() => setNotificationMessage("")} 
+      {/* ✅ Notification modale */}
+      <NotificationModal
+        message={notificationMessage}
+        onClose={() => setNotificationMessage("")}
       />
 
       <div className="max-w-md w-full bg-blue-950/60 rounded-2xl p-8 shadow-2xl border border-blue-700/50 backdrop-blur-xl">
         <div className="flex justify-center mb-6">
-          {/* Remplacement du composant Next/Image par la balise <img> standard */}
           <img
             src="https://cdn-icons-png.flaticon.com/512/2103/2103691.png"
             alt="Epitime Logo"
             width={80}
             height={80}
-            className="w-20 h-20" // Ajout de classes Tailwind pour gérer la taille sur <img>
+            className="w-20 h-20"
           />
         </div>
 
@@ -112,12 +134,6 @@ export default function LoginPage() {
                   onChange={handleChange}
                   required
                   placeholder="John Doe"
-                  onInvalid={(e) =>
-                    (e.target as HTMLInputElement).setCustomValidity("Please enter your full name.")
-                  }
-                  onInput={(e) =>
-                    (e.target as HTMLInputElement).setCustomValidity("")
-                  }
                   className="w-full pl-10 pr-4 py-3 bg-blue-900/50 border border-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
                 />
               </div>
@@ -135,39 +151,27 @@ export default function LoginPage() {
                 onChange={handleChange}
                 required
                 placeholder="example@mail.com"
-                onInvalid={(e) =>
-                  (e.target as HTMLInputElement).setCustomValidity("Please enter a valid email address.")
-                }
-                onInput={(e) =>
-                  (e.target as HTMLInputElement).setCustomValidity("")
-                }
                 className="w-full pl-10 pr-4 py-3 bg-blue-900/50 border border-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
               />
             </div>
           </div>
 
-           {!isLogin && (
-           <div>
-            <label className="block text-sm mb-2">phone number</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
-              <input
-                type="tel"
-                name="phone_number"
-                value={formData.phone_number}
-                onChange={handleChange}
-                required
-                placeholder="+69 696969696"
-                onInvalid={(e) =>
-                  (e.target as HTMLInputElement).setCustomValidity("Please enter a valid phone number.")
-                }
-                onInput={(e) =>
-                  (e.target as HTMLInputElement).setCustomValidity("")
-                }
-                className="w-full pl-10 pr-4 py-3 bg-blue-900/50 border border-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
-              />
+          {!isLogin && (
+            <div>
+              <label className="block text-sm mb-2">Phone number</label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
+                <input
+                  type="tel"
+                  name="phone_number"
+                  value={formData.phone_number}
+                  onChange={handleChange}
+                  required
+                  placeholder="+33 6 00 00 00 00"
+                  className="w-full pl-10 pr-4 py-3 bg-blue-900/50 border border-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                />
+              </div>
             </div>
-          </div>
           )}
 
           <div>
@@ -181,12 +185,6 @@ export default function LoginPage() {
                 onChange={handleChange}
                 required
                 placeholder="••••••••"
-                onInvalid={(e) =>
-                  (e.target as HTMLInputElement).setCustomValidity("Please enter your password.")
-                }
-                onInput={(e) =>
-                  (e.target as HTMLInputElement).setCustomValidity("")
-                }
                 className="w-full pl-10 pr-10 py-3 bg-blue-900/50 border border-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
               />
               <button
@@ -200,26 +198,17 @@ export default function LoginPage() {
           </div>
 
           {!isLogin && (
-          <div>
-            <label className="block text-sm mb-2">Confirm Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                  placeholder="••••••••"
-                  onInvalid={(e) =>
-                    (e.target as HTMLInputElement).setCustomValidity("Please confirm your password.")
-                  }
-                  onInput={(e) =>
-                    (e.target as HTMLInputElement).setCustomValidity("")
-                  }
-                  className="w-full pl-10 pr-4 py-3 bg-blue-900/50 border border-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                />
-              </div>
+            <div>
+              <label className="block text-sm mb-2">Confirm Password</label>
+              <input
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                placeholder="••••••••"
+                className="w-full pl-10 pr-4 py-3 bg-blue-900/50 border border-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              />
             </div>
           )}
 

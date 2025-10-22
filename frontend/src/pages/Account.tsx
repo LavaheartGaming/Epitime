@@ -1,194 +1,347 @@
-// Fichier : Account.tsx
-
 import React, { useState, useEffect } from "react";
-// Les icônes de Lucide React sont des dépendances standard de React
+import { useAuth } from "../context/AuthContext";
 import {
-  ChevronDown,
-  ChevronUp,
-  Pencil,
+  User,
+  Phone,
+  Mail,
   Lock,
   Trash2,
-  Bell,
-  Settings,
-  Shield,
+  ShieldCheck,
+  Eye,
+  EyeOff,
+  Save,
+  LogOut,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-export function AccountPage() { // L'exportation nommée existante est conservée
-  // Utilisation de l'interface User pour le type (si TypeScript)
-  const [openSection, setOpenSection] = useState<string | null>("profile");
-  const [user, setUser] = useState<{ name: string; role: string }>({
-    name: "Guest",
-    role: "user", // default role
+export default function AccountPage() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+
+  // === États principaux ===
+  const [profile, setProfile] = useState({
+    username: user?.username || "",
+    email: user?.email || "",
+    phone_number: user?.phone_number || "",
   });
 
-  // Simulation de l'authentification (conserver le useEffect, c'est du React pur)
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    } else {
-      // Default demo user
-      setUser({ name: "Luca", role: "user" });
-    }
-  }, []);
+  const [passwordData, setPasswordData] = useState({
+    old_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
 
-  const toggleSection = (section: string) => {
-    setOpenSection(openSection === section ? null : section);
+  const [showPassword, setShowPassword] = useState(false);
+  const [message, setMessage] = useState("");
+  const [twoFAEnabled, setTwoFAEnabled] = useState<boolean>(
+    !!user?.two_factor_enabled
+  );
+  const [otpSecret, setOtpSecret] = useState<string>("");
+  const [otpCode, setOtpCode] = useState<string>("");
+
+  // === 🔁 Requêtes authentifiées ===
+  const fetchWithAuth = async (url: string, method = "GET", body?: any) => {
+    const token = localStorage.getItem("access_token");
+    const headers: any = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+    const options: any = { method, headers };
+    if (body) options.body = JSON.stringify(body);
+    return fetch(url, options);
   };
 
-  // Message basé sur le rôle
-  const roleMessage =
-    user.role === "admin"
-      ? "You have administrative rights. You can manage all users, teams, and configurations."
-      : user.role === "manager"
-      ? "You manage a team. Track attendance, manage tasks, and oversee performance."
-      : "You can track your hours, view tasks, and manage your personal preferences.";
+  // === ⏳ Chargement du profil ===
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        username: user.username || "",
+        email: user.email || "",
+        phone_number: user.phone_number || "",
+      });
+      setTwoFAEnabled(!!user.two_factor_enabled);
+    }
+  }, [user]);
 
+  // === 🧾 Mise à jour du profil ===
+  const handleProfileUpdate = async () => {
+    try {
+      const res = await fetchWithAuth(
+        `${API_URL}/api/users/update/`,
+        "PUT",
+        profile
+      );
+      const data = await res.json();
+      if (res.ok) {
+        setMessage("✅ Profile updated successfully!");
+      } else {
+        setMessage(data.error || "❌ Failed to update profile.");
+      }
+    } catch {
+      setMessage("⚠️ Server unreachable.");
+    }
+  };
+
+  // === 🔑 Changement de mot de passe ===
+  const handleChangePassword = async () => {
+    try {
+      const res = await fetchWithAuth(
+        `${API_URL}/api/users/change-password/`,
+        "PUT",
+        passwordData
+      );
+      const data = await res.json();
+      if (res.ok) {
+        setMessage("✅ Password changed successfully!");
+        setPasswordData({
+          old_password: "",
+          new_password: "",
+          confirm_password: "",
+        });
+      } else {
+        setMessage(data.error || "❌ Password change failed.");
+      }
+    } catch {
+      setMessage("⚠️ Server unreachable.");
+    }
+  };
+
+  // === ❌ Suppression du compte ===
+  const handleDeleteAccount = async () => {
+    if (!window.confirm("⚠️ Are you sure you want to delete your account?"))
+      return;
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/users/delete/`, "DELETE");
+      if (res.ok) {
+        alert("✅ Account deleted successfully.");
+        logout();
+        navigate("/login");
+      } else {
+        setMessage("❌ Failed to delete account.");
+      }
+    } catch {
+      setMessage("⚠️ Server unreachable.");
+    }
+  };
+
+  // === 🔐 Activation de la double authentification ===
+  const handleEnable2FA = async () => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/users/enable-2fa/`, "POST");
+      const data = await res.json();
+      if (res.ok) {
+        setOtpSecret(data.otp_secret);
+        setMessage("✅ 2FA setup initiated. Enter your code below.");
+      } else {
+        setMessage(data.error || "❌ Failed to initiate 2FA.");
+      }
+    } catch {
+      setMessage("⚠️ Server unreachable.");
+    }
+  };
+
+  // === ✅ Vérification du code 2FA ===
+  const handleVerify2FA = async () => {
+    try {
+      const res = await fetchWithAuth(
+        `${API_URL}/api/users/verify-2fa/`,
+        "POST",
+        { code: otpCode }
+      );
+      const data = await res.json();
+      if (res.ok) {
+        setTwoFAEnabled(true);
+        setMessage("✅ 2FA activated successfully!");
+      } else {
+        setMessage(data.error || "❌ Invalid 2FA code.");
+      }
+    } catch {
+      setMessage("⚠️ Server unreachable.");
+    }
+  };
+
+  // === 🎨 Interface ===
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-950 via-blue-900 to-indigo-900 text-white py-16 px-6 flex flex-col items-center">
-      {/* Header */}
-      <div className="text-center mb-12">
-        <img
-          src="https://cdn-icons-png.flaticon.com/512/2103/2103691.png"
-          alt="Epitime Logo"
-          className="w-24 h-24 mx-auto mb-4 rounded-full shadow-lg"
-        />
-        <h1 className="text-3xl font-bold text-yellow-400 mb-2">
-          Hello, {user.name} 👋
-        </h1>
-        <p className="text-white/70">{roleMessage}</p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-blue-900 via-blue-800 to-indigo-900 text-white py-12 px-6">
+      <div className="max-w-2xl mx-auto bg-blue-950/60 p-8 rounded-2xl shadow-2xl border border-blue-700/40 backdrop-blur-xl">
+        <div className="text-center mb-8">
+          <img
+            src="https://cdn-icons-png.flaticon.com/512/2103/2103691.png"
+            alt="Epitime"
+            className="w-20 mx-auto mb-4"
+          />
+          <h1 className="text-3xl font-bold text-yellow-400 mb-2">
+            Hello, {user?.username} 👋
+          </h1>
+          <p className="text-sm text-gray-300">{user?.email}</p>
+        </div>
 
-      {/* Content */}
-      <div className="w-full max-w-3xl flex flex-col gap-4">
-        {/* Account management */}
-        <AccountSection
-          title="Account Management"
-          icon={<Settings className="text-yellow-400" />}
-          isOpen={openSection === "profile"}
-          onToggle={() => toggleSection("profile")}
-        >
-          <ul className="space-y-3">
-            <li className="flex items-center gap-2 hover:text-yellow-300 cursor-pointer transition-colors">
-              <Pencil size={16} /> Edit profile information
-            </li>
-            <li className="flex items-center gap-2 hover:text-yellow-300 cursor-pointer transition-colors">
-              <Lock size={16} /> Change password
-            </li>
-            <li className="flex items-center gap-2 hover:text-red-400 cursor-pointer transition-colors">
-              <Trash2 size={16} /> Delete account
-            </li>
-          </ul>
-        </AccountSection>
-
-        {/* Role-specific section */}
-        {user.role === "manager" && (
-          <AccountSection
-            title="Team Management"
-            icon={<Bell className="text-yellow-400" />}
-            isOpen={openSection === "team"}
-            onToggle={() => toggleSection("team")}
-          >
-            <p className="text-white/80 text-sm">
-              Manage your team members, review attendance, and monitor KPIs.
-            </p>
-          </AccountSection>
+        {message && (
+          <div className="bg-blue-800 border border-yellow-400 text-center py-3 mb-6 rounded-xl font-semibold">
+            {message}
+          </div>
         )}
 
-        {user.role === "admin" && (
-          <AccountSection
-            title="System Administration"
-            icon={<Shield className="text-yellow-400" />}
-            isOpen={openSection === "admin"}
-            onToggle={() => toggleSection("admin")}
-          >
-            <p className="text-white/80 text-sm">
-              Access full administrative controls including user management,
-              database monitoring, and configuration settings.
+        {/* === Profil === */}
+        <section className="mb-8">
+          <h2 className="text-xl font-bold mb-3 text-yellow-400 flex items-center gap-2">
+            <User /> Profile Information
+          </h2>
+          <div className="space-y-3">
+            <input
+              type="text"
+              placeholder="Username"
+              value={profile.username}
+              onChange={(e) =>
+                setProfile({ ...profile, username: e.target.value })
+              }
+              className="w-full bg-blue-900/50 border border-blue-700 rounded-lg p-3 focus:ring-2 focus:ring-yellow-400"
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              value={profile.email}
+              onChange={(e) =>
+                setProfile({ ...profile, email: e.target.value })
+              }
+              className="w-full bg-blue-900/50 border border-blue-700 rounded-lg p-3 focus:ring-2 focus:ring-yellow-400"
+            />
+            <input
+              type="tel"
+              placeholder="Phone number"
+              value={profile.phone_number}
+              onChange={(e) =>
+                setProfile({ ...profile, phone_number: e.target.value })
+              }
+              className="w-full bg-blue-900/50 border border-blue-700 rounded-lg p-3 focus:ring-2 focus:ring-yellow-400"
+            />
+            <button
+              onClick={handleProfileUpdate}
+              className="bg-yellow-400 text-gray-900 py-2 px-5 rounded-lg font-semibold hover:bg-yellow-300 transition-all flex items-center gap-2"
+            >
+              <Save size={18} /> Save Changes
+            </button>
+          </div>
+        </section>
+
+        {/* === Mot de passe === */}
+        <section className="mb-8">
+          <h2 className="text-xl font-bold mb-3 text-yellow-400 flex items-center gap-2">
+            <Lock /> Change Password
+          </h2>
+          <div className="space-y-3">
+            {["old_password", "new_password", "confirm_password"].map(
+              (field, i) => (
+                <input
+                  key={i}
+                  type={showPassword ? "text" : "password"}
+                  placeholder={
+                    field === "old_password"
+                      ? "Old password"
+                      : field === "new_password"
+                      ? "New password"
+                      : "Confirm password"
+                  }
+                  value={(passwordData as any)[field]}
+                  onChange={(e) =>
+                    setPasswordData({
+                      ...passwordData,
+                      [field]: e.target.value,
+                    })
+                  }
+                  className="w-full bg-blue-900/50 border border-blue-700 rounded-lg p-3 focus:ring-2 focus:ring-yellow-400"
+                />
+              )
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="text-yellow-400 text-sm hover:underline flex items-center gap-1"
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />} Toggle
+              visibility
+            </button>
+
+            <button
+              onClick={handleChangePassword}
+              className="bg-yellow-400 text-gray-900 py-2 px-5 rounded-lg font-semibold hover:bg-yellow-300 transition-all flex items-center gap-2"
+            >
+              <Lock size={18} /> Update Password
+            </button>
+          </div>
+        </section>
+
+        {/* === 2FA === */}
+        <section className="mb-8">
+          <h2 className="text-xl font-bold mb-3 text-yellow-400 flex items-center gap-2">
+            <ShieldCheck /> Security & 2FA
+          </h2>
+
+          {twoFAEnabled ? (
+            <p className="text-green-400 font-semibold">
+              ✅ 2FA is currently enabled on your account.
             </p>
-          </AccountSection>
-        )}
+          ) : (
+            <div className="space-y-3">
+              {!otpSecret ? (
+                <button
+                  onClick={handleEnable2FA}
+                  className="bg-yellow-400 text-gray-900 py-2 px-5 rounded-lg font-semibold hover:bg-yellow-300 transition-all"
+                >
+                  Enable 2FA
+                </button>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-300">
+                    Use your authenticator app and enter this 6-digit code:
+                  </p>
+                  <input
+                    type="text"
+                    placeholder="Enter 6-digit code"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    className="w-full bg-blue-900/50 border border-blue-700 rounded-lg p-3 focus:ring-2 focus:ring-yellow-400"
+                  />
+                  <button
+                    onClick={handleVerify2FA}
+                    className="bg-yellow-400 text-gray-900 py-2 px-5 rounded-lg font-semibold hover:bg-yellow-300 transition-all"
+                  >
+                    Verify Code
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </section>
 
-        {/* Preferences */}
-        <AccountSection
-          title="Preferences & Notifications"
-          icon={<Bell className="text-yellow-400" />}
-          isOpen={openSection === "prefs"}
-          onToggle={() => toggleSection("prefs")}
-        >
-          <ul className="space-y-3">
-            <li>
-              <label className="flex items-center gap-3">
-                <input type="checkbox" className="accent-yellow-400" />
-                Receive daily task reminders
-              </label>
-            </li>
-            <li>
-              <label className="flex items-center gap-3">
-                <input type="checkbox" className="accent-yellow-400" />
-                Enable automatic dark mode
-              </label>
-            </li>
-          </ul>
-        </AccountSection>
-
-        {/* Security */}
-        <AccountSection
-          title="Security & Privacy"
-          icon={<Lock className="text-yellow-400" />}
-          isOpen={openSection === "security"}
-          onToggle={() => toggleSection("security")}
-        >
-          <p className="text-white/80 text-sm">
-            Your account is protected with standard authentication.
-            <br />
-            For better protection, enable Two-Factor Authentication (2FA).
-          </p>
-          <button className="mt-3 bg-yellow-400 text-gray-900 px-4 py-2 rounded-lg hover:bg-yellow-300 font-semibold transition-all">
-            Enable 2FA
+        {/* === Suppression du compte === */}
+        <section>
+          <h2 className="text-xl font-bold mb-3 text-yellow-400 flex items-center gap-2">
+            <Trash2 /> Danger Zone
+          </h2>
+          <button
+            onClick={handleDeleteAccount}
+            className="bg-red-600 hover:bg-red-500 text-white py-2 px-5 rounded-lg font-semibold transition-all"
+          >
+            Delete My Account
           </button>
-        </AccountSection>
+        </section>
+
+        {/* === Déconnexion === */}
+        <div className="mt-10 text-center">
+          <button
+            onClick={() => {
+              logout();
+              navigate("/login");
+            }}
+            className="bg-yellow-400 text-gray-900 py-2 px-5 rounded-lg font-semibold hover:bg-yellow-300 transition-all flex items-center justify-center mx-auto gap-2"
+          >
+            <LogOut size={18} /> Logout
+          </button>
+        </div>
       </div>
     </div>
   );
 }
-
-// Composant Enfant (pas de changement nécessaire, c'est du React standard)
-function AccountSection({
-  title,
-  icon,
-  children,
-  isOpen,
-  onToggle,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-  isOpen: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div className="bg-blue-950/60 border border-blue-800 rounded-2xl shadow-md overflow-hidden transition-all duration-300">
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-5 py-4 text-left text-lg font-semibold text-yellow-400"
-      >
-        <div className="flex items-center gap-3">
-          {icon}
-          <span>{title}</span>
-        </div>
-        {isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-      </button>
-
-      {isOpen && (
-        // L'animation CSS (animate-fadeIn) dépend de votre configuration Tailwind CSS
-        <div className="px-6 pb-6 text-white/90 text-sm animate-fadeIn"> 
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
-
-
-export default AccountPage;
