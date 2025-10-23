@@ -26,9 +26,9 @@ services:
       - .env
     command: >
       sh -c "
-        echo '⏳ Waiting for MariaDB...' &&
+        echo 'Waiting for MariaDB...' &&
         until nc -z db 3306; do sleep 1; done &&
-        echo '✅ MariaDB is ready. Starting Django...' &&
+        echo 'MariaDB is ready. Starting Django...' &&
         python manage.py migrate &&
         python manage.py runserver 0.0.0.0:8000
       "
