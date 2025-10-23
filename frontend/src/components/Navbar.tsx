@@ -1,30 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, User } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [profilePicUrl, setProfilePicUrl] = useState<string | null>(null);
   const location = useLocation();
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      setIsLoggedIn(true);
-      setProfilePicUrl("/default-avatar.png");
-    } else {
-      setIsLoggedIn(false);
-      setProfilePicUrl(null);
-    }
-  }, []);
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const navigation = [
     { name: "Home", href: "/home" },
     { name: "Dashboard", href: "/dashboard" },
     { name: "Clock", href: "/clock" },
     { name: "Chat", href: "/chat" },
-    { name: "My Account", href: "/account" },
   ];
 
   return (
@@ -62,20 +51,13 @@ const Navbar: React.FC = () => {
           ))}
 
           {/* PROFILE BUTTON */}
-          <Link
-            to={isLoggedIn ? "/account" : "/login"}
-            className="flex items-center justify-center h-10 w-10 rounded-full overflow-hidden bg-yellow-400 hover:bg-yellow-300 transition-all transform hover:scale-110 border border-white/20 shadow-md"
+          <button
+            onClick={() => navigate(user ? "/account" : "/login")}
+            className="flex items-center justify-center h-10 w-10 rounded-full bg-yellow-400 hover:bg-yellow-300 transition-all transform hover:scale-110 border border-white/20 shadow-md"
+            title={user ? "My Account" : "Sign In"}
           >
-            {profilePicUrl ? (
-              <img
-                src={profilePicUrl}
-                alt="Profile"
-                className="object-cover rounded-full w-10 h-10"
-              />
-            ) : (
-              <User className="h-5 w-5 text-gray-900" />
-            )}
-          </Link>
+            <User className="h-5 w-5 text-gray-900" />
+          </button>
         </div>
 
         {/* MOBILE MENU TOGGLE */}
@@ -108,13 +90,15 @@ const Navbar: React.FC = () => {
           ))}
 
           <div className="mt-4 border-t border-blue-800 pt-3">
-            <Link
-              to={isLoggedIn ? "/account" : "/login"}
+            <button
+              onClick={() => {
+                navigate(user ? "/account" : "/login");
+                setIsMenuOpen(false);
+              }}
               className="block w-full bg-yellow-400 text-gray-900 text-center font-semibold py-2 rounded-lg hover:bg-yellow-300 transition-all"
-              onClick={() => setIsMenuOpen(false)}
             >
-              {isLoggedIn ? "My Account" : "Sign In"}
-            </Link>
+              {user ? "My Account" : "Sign In"}
+            </button>
           </div>
         </div>
       )}

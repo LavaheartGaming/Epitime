@@ -1,0 +1,7 @@
+Django>=5.0
+djangorestframework
+mysqlclient
+python-dotenv
+django-cors-headers
+django-otp
+djangorestframework-simplejwt
