@@ -3,9 +3,11 @@ services:
     image: mariadb:11
     container_name: epitime-db-1
     restart: always
+    env_file:
+      - .env
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: epitime
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: epitime
     ports:
       - "3306:3306"
     volumes:
@@ -20,6 +22,8 @@ services:
   backend:
     build: ./backend
     container_name: epitime-backend-1
+    env_file:
+      - .env
     command: >
       sh -c "
         echo '⏳ Waiting for MariaDB...' &&
@@ -34,16 +38,10 @@ services:
       - "8000:8000"
     depends_on:
       - db
-    environment:
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_NAME=epitime
-      - DB_USER=root
-      - DB_PASSWORD=root
-
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
     container_name: epitime-frontend-1
     restart: always
     stdin_open: true
@@ -55,8 +53,7 @@ services:
     command: ["npm", "start"]
     environment:
       - CHOKIDAR_USEPOLLING=true
-      - REACT_APP_API_URL=http://backend:8000
-
+      - REACT_APP_API_URL=http://localhost:8000
 
 volumes:
   mariadb_data:
