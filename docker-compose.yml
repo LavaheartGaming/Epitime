@@ -1,34 +1,59 @@
-version: "3.9"
-
 services:
   db:
-    image: postgres:15
-    container_name: epitime_db
+    image: mariadb:11
+    container_name: epitime-db-1
     restart: always
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: epitime
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   backend:
-    build:
-      context: ./backend
-    container_name: epitime_backend
+    build: ./backend
+    container_name: epitime-backend-1
+    env_file:
+      - .env
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+      sh -c "
+        echo 'Waiting for MariaDB...' &&
+        until nc -z db 3306; do sleep 1; done &&
+        echo 'MariaDB is ready. Starting Django...' &&
+        python manage.py migrate &&
+        python manage.py runserver 0.0.0.0:8000
+      "
     volumes:
       - ./backend:/app
     ports:
       - "8000:8000"
     depends_on:
       - db
-    env_file:
-      - ./backend/.env
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: epitime-frontend-1
+    restart: always
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"
+    command: ["npm", "start"]
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - REACT_APP_API_URL=http://localhost:8000
 
 volumes:
-  postgres_data:
+  mariadb_data:
