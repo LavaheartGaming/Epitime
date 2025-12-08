@@ -1,17 +1,13 @@
-# ---- Frontend Dockerfile ----
-FROM node:20-alpine
+# Étape 1 : build du frontend
+FROM node:18-alpine
 
-# Répertoire de travail
 WORKDIR /app
 
-# Copie des fichiers de dépendances
 COPY package*.json ./
-
-# Installation des dépendances
 RUN npm install
 
-# Copie du reste du projet React
+# Copie du code + fichier .env
 COPY . .
 
-# Lancement du serveur React
+EXPOSE 3000
 CMD ["npm", "start"]

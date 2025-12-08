@@ -1,7 +1,3 @@
-"""
-Django settings for api project.
-"""
-
 from pathlib import Path
 import os
 from dotenv import load_dotenv
@@ -35,7 +31,7 @@ AUTH_USER_MODEL = 'users.User'
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # Important : doit être avant CommonMiddleware
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -71,7 +67,7 @@ DATABASES = {
         'NAME': os.getenv('DB_NAME', 'epitime'),
         'USER': os.getenv('DB_USER', 'epitime_user'),
         'PASSWORD': os.getenv('DB_PASSWORD', 'epitime_pass'),
-        'HOST': os.getenv('DB_HOST', 'db'),  # nom du service Docker
+        'HOST': os.getenv('DB_HOST', 'db'), 
         'PORT': os.getenv('DB_PORT', '3306'),
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",

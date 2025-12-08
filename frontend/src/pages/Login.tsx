@@ -37,13 +37,15 @@ export default function LoginPage() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
 
-  const [formData, setFormData] = useState({
+ const [formData, setFormData] = useState({
+    first_name: "",
+    last_name: "",
     phone_number: "",
-    name: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -60,9 +62,10 @@ export default function LoginPage() {
     const payload = isLogin
       ? { email: formData.email, password: formData.password }
       : {
-          username: formData.name,
           email: formData.email,
           password: formData.password,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
           phone_number: formData.phone_number,
         };
 
@@ -121,21 +124,39 @@ export default function LoginPage() {
           {isLogin ? "Login" : "Sign Up"}
         </h2>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+         <form onSubmit={handleSubmit} className="space-y-6">
           {!isLogin && (
-            <div>
-              <label className="block text-sm mb-2">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  placeholder="John Doe"
-                  className="w-full pl-10 pr-4 py-3 bg-blue-900/50 border border-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                />
+            <div className="flex gap-4">
+              <div className="w-1/2">
+                <label className="block text-sm mb-2">First Name</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
+                  <input
+                    type="text"
+                    name="first_name"
+                    value={formData.first_name}
+                    onChange={handleChange}
+                    required
+                    placeholder="John"
+                    className="w-full pl-10 pr-4 py-3 bg-blue-900/50 border border-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  />
+                </div>
+              </div>
+
+              <div className="w-1/2">
+                <label className="block text-sm mb-2">Last Name</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
+                  <input
+                    type="text"
+                    name="last_name"
+                    value={formData.last_name}
+                    onChange={handleChange}
+                    required
+                    placeholder="Doe"
+                    className="w-full pl-10 pr-4 py-3 bg-blue-900/50 border border-blue-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  />
+                </div>
               </div>
             </div>
           )}

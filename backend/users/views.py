@@ -54,7 +54,8 @@ class LoginView(APIView):
             "refresh": str(refresh),
             "user": {
                 "id": user.id,
-                "username": user.username,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
                 "email": user.email,
                 "role": user.role,
                 "phone_number": user.phone_number,
