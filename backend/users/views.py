@@ -4,8 +4,9 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth import authenticate
-from .models import User
-from .serializers import UserSerializer
+from .models import User, TimeEntry
+from .serializers import UserSerializer, TimeEntrySerializer
+from django.utils import timezone
 
 from django_otp.oath import TOTP
 from django_otp.util import random_hex
@@ -25,6 +26,7 @@ class RegisterView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "✅ User registered successfully!"}, status=status.HTTP_201_CREATED)
+        print("REGISTER ERRORS:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -56,6 +58,7 @@ class LoginView(APIView):
                 "id": user.id,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
+                "full_name": user.full_name,
                 "email": user.email,
                 "role": user.role,
                 "phone_number": user.phone_number,
@@ -154,3 +157,58 @@ class Verify2FAView(APIView):
             user.save()
             return Response({"message": "✅ 2FA activated successfully"})
         return Response({"error": "❌ Invalid 2FA code"}, status=400)
+
+class ClockInView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+
+        # Prevent starting a new session if one is already open
+        open_entry = TimeEntry.objects.filter(user=user, clock_out__isnull=True).order_by("-clock_in").first()
+        if open_entry:
+            return Response(
+                {"error": "You are already clocked in. Clock out before clocking in again."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        entry = TimeEntry.objects.create(user=user, clock_in=timezone.now())
+        return Response(
+            {"message": "✅ Clocked in successfully.", "entry": TimeEntrySerializer(entry).data},
+            status=status.HTTP_200_OK,
+        )
+
+
+class ClockOutView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+
+        # Close the latest open session
+        entry = TimeEntry.objects.filter(user=user, clock_out__isnull=True).order_by("-clock_in").first()
+        if not entry:
+            return Response(
+                {"error": "You are not clocked in."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        entry.clock_out = timezone.now()
+        entry.compute_total_hours()
+        entry.save()
+
+        return Response(
+            {"message": "✅ Clocked out successfully.", "entry": TimeEntrySerializer(entry).data},
+            status=status.HTTP_200_OK,
+        )
+
+
+class TimeEntryListView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        entries = TimeEntry.objects.filter(user=request.user).order_by("-clock_in")[:200]
+        return Response(TimeEntrySerializer(entries, many=True).data, status=status.HTTP_200_OK)

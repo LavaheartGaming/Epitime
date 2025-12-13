@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
     UserListCreateView, RegisterView, LoginView, UpdateUserView,
-    ChangePasswordView, DeleteAccountView, Enable2FAView, Verify2FAView
+    ChangePasswordView, DeleteAccountView, Enable2FAView, Verify2FAView,ClockInView, ClockOutView, TimeEntryListView,
 )
 
 urlpatterns = [
@@ -13,4 +13,7 @@ urlpatterns = [
     path("delete/", DeleteAccountView.as_view(), name="delete-account"),
     path("enable-2fa/", Enable2FAView.as_view(), name="enable-2fa"),
     path("verify-2fa/", Verify2FAView.as_view(), name="verify-2fa"),
+    path("clock-in/", ClockInView.as_view(), name="clock-in"),
+    path("clock-out/", ClockOutView.as_view(), name="clock-out"),
+    path("time-entries/", TimeEntryListView.as_view(), name="time-entries"),
 ]

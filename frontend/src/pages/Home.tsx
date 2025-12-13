@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Clock, Users, BarChart3, CheckCircle2 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { Link } from "react-router-dom";
+
+
 
 const Home: React.FC = () => {
+  const { user } = useAuth();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -62,21 +67,18 @@ const Home: React.FC = () => {
           </p>
 
           <div className="flex justify-center gap-4 flex-wrap">
-            {!isLoggedIn && (
-              <a
-                href="/login"
-                className="bg-yellow-400 text-gray-900 font-semibold px-8 py-3 rounded-full hover:bg-yellow-300 transition-all transform hover:scale-105 shadow-lg"
-              >
-                Sign In
-              </a>
+            {!user && (
+              <Link to="/login">
+            <button className="...">Login</button>
+            </Link>
             )}
 
-            <button
-              onClick={handleClockRedirect}
-              className="bg-transparent border-2 border-yellow-400 text-yellow-400 px-8 py-3 rounded-full font-semibold hover:bg-yellow-400 hover:text-gray-900 transition-all transform hover:scale-105"
-            >
-              Clock In
-            </button>
+            <Link
+          to="/clock"
+          className="bg-transparent border-2 border-yellow-400 text-yellow-400 px-8 py-3 rounded-full font-semibold hover:bg-yellow-400 hover:text-gray-900 transition-all transform hover:scale-105"
+        >
+          Clock In
+        </Link>
           </div>
         </motion.div>
 

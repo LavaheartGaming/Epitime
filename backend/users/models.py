@@ -4,6 +4,7 @@ from django.contrib.auth.models import (
     PermissionsMixin,
     BaseUserManager
 )
+from django.utils import timezone
 
 # Custom User Manager
 
@@ -70,3 +71,30 @@ class User(AbstractBaseUser, PermissionsMixin):
     def full_name(self):
         """Convenient read-only field for serializers/UI"""
         return f"{self.first_name} {self.last_name}".strip()
+
+from django.db import models
+from django.utils import timezone
+
+class TimeEntry(models.Model):
+    user = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="time_entries",
+    )
+
+    clock_in = models.DateTimeField(default=timezone.now)
+    clock_out = models.DateTimeField(null=True, blank=True)
+    total_hours = models.FloatField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-clock_in", "-created_at"]
+
+    def __str__(self):
+        return f"{self.user.email} - IN {self.clock_in} / OUT {self.clock_out}"
+
+    def compute_total_hours(self):
+        if self.clock_in and self.clock_out:
+            delta = self.clock_out - self.clock_in
+            self.total_hours = round(delta.total_seconds() / 3600, 2)
