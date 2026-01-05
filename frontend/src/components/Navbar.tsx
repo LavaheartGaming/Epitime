@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, User } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -9,12 +9,20 @@ const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const navigation = [
-    { name: "Home", href: "/home" },
-    { name: "Dashboard", href: "/dashboard" },
-    { name: "Clock", href: "/clock" },
-    { name: "Chat", href: "/chat" },
-  ];
+  // ✅ Only managers/admins can see Team Manager
+  const canSeeTeamManager = !!user && ["manager", "admin"].includes(user.role);
+
+  // ✅ Build navigation based on role
+  const navigation = useMemo(
+    () => [
+      { name: "Home", href: "/home" },
+      { name: "Dashboard", href: "/dashboard" },
+      { name: "Clock", href: "/clock" },
+      { name: "Chat", href: "/chat" },
+      ...(canSeeTeamManager ? [{ name: "Team Manager", href: "/team" }] : []),
+    ],
+    [canSeeTeamManager]
+  );
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-blue-950/95 backdrop-blur-md border-b border-blue-800 shadow-lg">

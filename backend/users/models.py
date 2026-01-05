@@ -7,7 +7,6 @@ from django.contrib.auth.models import (
 from django.utils import timezone
 
 # Custom User Manager
-
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, first_name, last_name, phone_number, password=None, **extra_fields):
         if not email:
@@ -55,10 +54,19 @@ class User(AbstractBaseUser, PermissionsMixin):
     ]
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="user")
 
+    # ✅ NEW: link user to a manager (team assignment)
+    manager = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="team_members",
+        limit_choices_to={"role__in": ["manager", "admin"]},
+    )
+
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 
-    # Link to our custom manager
     objects = CustomUserManager()
 
     USERNAME_FIELD = "email"
@@ -69,11 +77,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     @property
     def full_name(self):
-        """Convenient read-only field for serializers/UI"""
         return f"{self.first_name} {self.last_name}".strip()
 
-from django.db import models
-from django.utils import timezone
 
 class TimeEntry(models.Model):
     user = models.ForeignKey(
@@ -98,3 +103,26 @@ class TimeEntry(models.Model):
         if self.clock_in and self.clock_out:
             delta = self.clock_out - self.clock_in
             self.total_hours = round(delta.total_seconds() / 3600, 2)
+
+
+# status marking (late / pto / normal) per day
+class TeamStatus(models.Model):
+    STATUS_CHOICES = [
+        ("normal", "Normal"),
+        ("late", "Late"),
+        ("pto", "PTO"),
+    ]
+
+    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="team_statuses")
+    date = models.DateField(default=timezone.localdate)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="normal")
+    note = models.CharField(max_length=255, blank=True, default="")
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("user", "date")
+        ordering = ["-date", "-updated_at"]
+
+    def __str__(self):
+        return f"{self.user.email} {self.date} -> {self.status}"

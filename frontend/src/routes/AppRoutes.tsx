@@ -7,6 +7,7 @@ import Account from "../pages/Account";
 import Login from "../pages/Login";
 import NotFound from "../pages/404";
 import Navbar from "../components/Navbar";
+import TeamManagerPage from "../pages/TeamManager"
 import { useAuth } from "../context/AuthContext";
 import React, { ReactElement } from "react";
 // Route protégée
@@ -26,6 +27,7 @@ function AppRoutes() {
       {user && <Navbar />}
 
       <Routes>
+        <Route path="/team" element={<TeamManagerPage />} />
         <Route path="/" element={user ? <Home /> : <Navigate to="/login" />} />
         <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Clock, LogIn, LogOut, BarChart2, User } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+
 
 interface TimeRecord {
   date: string; // formatted date for display (from clock_in)
@@ -13,7 +15,7 @@ export function ClockDashboard() {
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
   const [isClockedIn, setIsClockedIn] = useState(false);
-  const [userName] = useState("John Doe");
+  const { user } = useAuth();
 
   const [records, setRecords] = useState<TimeRecord[]>([]);
   const [today] = useState(new Date().toLocaleDateString());
@@ -161,7 +163,7 @@ export function ClockDashboard() {
             <User className="w-8 h-8 text-yellow-400" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">{userName}</h2>
+            <h2 className="text-xl font-semibold">{user ? user.full_name : "My dashboard"}</h2>
             <p className="text-sm text-blue-300">Software Engineer | Remote</p>
           </div>
         </div>

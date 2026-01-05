@@ -1,7 +1,8 @@
 from django.urls import path
 from .views import (
-    UserListCreateView, RegisterView, LoginView, UpdateUserView,
-    ChangePasswordView, DeleteAccountView, Enable2FAView, Verify2FAView,ClockInView, ClockOutView, TimeEntryListView,
+    TeamTimeEntryUpsertView, UserListCreateView, RegisterView, LoginView, UpdateUserView,
+    ChangePasswordView, DeleteAccountView, Enable2FAView, Verify2FAView,ClockInView, ClockOutView, TimeEntryListView, TeamMembersView,
+    AdminAssignManagerView, TeamMemberTimeEntriesView, TeamStatusSetView, MyTodayStatusView, MyTeamView
 )
 
 urlpatterns = [
@@ -16,4 +17,12 @@ urlpatterns = [
     path("clock-in/", ClockInView.as_view(), name="clock-in"),
     path("clock-out/", ClockOutView.as_view(), name="clock-out"),
     path("time-entries/", TimeEntryListView.as_view(), name="time-entries"),
+    path("team/members/", TeamMembersView.as_view(), name="team-members"),
+    path("team/assign-manager/", AdminAssignManagerView.as_view(), name="admin-assign-manager"),
+    path("team/members/<int:user_id>/time-entries/", TeamMemberTimeEntriesView.as_view(), name="team-member-entries"),
+    path("team/status/", TeamStatusSetView.as_view(), name="team-status-set"),
+    path("team/time-entry/", TeamTimeEntryUpsertView.as_view(), name="team-time-entry-upsert"),
+    path("me/status/", MyTodayStatusView.as_view(), name="my-today-status"),
+    path("me/team/", MyTeamView.as_view(), name="my-team"),
+
 ]
