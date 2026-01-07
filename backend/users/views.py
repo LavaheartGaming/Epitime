@@ -6,9 +6,10 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import BasePermission
 from django.shortcuts import get_object_or_404
-from .models import User, TimeEntry, TeamStatus
-from .serializers import UserSerializer, TimeEntrySerializer, TeamStatusSerializer
+from .models import User, TimeEntry, TeamStatus, Task
+from .serializers import UserSerializer, TimeEntrySerializer, TeamStatusSerializer, TaskSerializer
 from django.utils import timezone
+from django.db import models
 
 from django_otp.oath import TOTP
 from django_otp.util import random_hex
@@ -226,6 +227,10 @@ class IsAdmin(BasePermission):
 
 
 def _is_in_manager_team(manager_user, target_user) -> bool:
+    """Check if target_user is manageable by manager_user.
+    Managers can only manage regular users, not other managers/admins."""
+    if target_user.role in ["manager", "admin"]:
+        return False  # Managers cannot manage other managers/admins
     return target_user.manager_id == manager_user.id
 
 
@@ -239,8 +244,12 @@ class TeamMembersView(APIView):
 
         if request.user.role == "admin":
             users_qs = User.objects.all().order_by("last_name", "first_name")
+        elif request.user.role == "manager":
+            # Managers see all users but can only manage regular users
+            users_qs = User.objects.all().order_by("last_name", "first_name")
         else:
-            users_qs = User.objects.filter(manager=request.user).order_by("last_name", "first_name")
+            # Regular users shouldn't access this endpoint
+            users_qs = User.objects.none()
 
         # open session info
         open_entries = TimeEntry.objects.filter(user__in=users_qs, clock_out__isnull=True)
@@ -369,7 +378,7 @@ class TeamTimeEntryUpsertView(APIView):
 # ---- Admin only: assign or remove user -> manager ----
 class AdminAssignManagerView(APIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsManagerOrAdmin]
 
     def put(self, request):
         user_id = request.data.get("user_id")
@@ -379,8 +388,16 @@ class AdminAssignManagerView(APIView):
             return Response({"error": "user_id is required."}, status=400)
 
         target = get_object_or_404(User, id=user_id)
+        
+        # Managers cannot manage other managers/admins
+        if request.user.role == "manager" and target.role in ["manager", "admin"]:
+            return Response({"error": "You cannot manage other managers or admins."}, status=403)
 
         if manager_id is None:
+            # Managers can only remove from their own team
+            if request.user.role == "manager" and target.manager_id != request.user.id:
+                return Response({"error": "You can only remove users from your own team."}, status=403)
+            
             target.manager = None
             target.save()
             return Response({"message": "✅ Manager removed."}, status=200)
@@ -388,6 +405,10 @@ class AdminAssignManagerView(APIView):
         manager_user = get_object_or_404(User, id=manager_id)
         if manager_user.role not in ["manager", "admin"]:
             return Response({"error": "manager_id must be a manager/admin user."}, status=400)
+        
+        # Managers can only assign to themselves
+        if request.user.role == "manager" and manager_id != request.user.id:
+            return Response({"error": "You can only assign users to yourself."}, status=403)
 
         target.manager = manager_user
         target.save()
@@ -479,3 +500,114 @@ class MyTeamView(APIView):
             "manager": manager_info,
             "members": members
         })
+
+
+# ---- Task Views for Users ----
+class TaskListCreateView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """List tasks based on user role"""
+        if request.user.role == "admin":
+            # Admins see all tasks
+            tasks = Task.objects.all().order_by("-created_at")
+        elif request.user.role == "manager":
+            # Managers see tasks of their team + their own tasks
+            team_members = User.objects.filter(manager=request.user)
+            tasks = Task.objects.filter(
+                models.Q(assigned_to=request.user) |
+                models.Q(created_by=request.user) |
+                models.Q(assigned_to__in=team_members) |
+                models.Q(created_by__in=team_members)
+            ).distinct().order_by("-created_at")
+        else:
+            # Regular users see only their own tasks
+            tasks = Task.objects.filter(
+                models.Q(assigned_to=request.user) | models.Q(created_by=request.user)
+            ).distinct().order_by("-created_at")
+        
+        return Response(TaskSerializer(tasks, many=True).data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        """Create a new task with role-based assignment"""
+        serializer = TaskSerializer(data=request.data)
+        if serializer.is_valid():
+            assigned_to_id = request.data.get("assigned_to", request.user.id)
+            
+            # Regular users can only assign to themselves
+            if request.user.role == "user":
+                assigned_to_id = request.user.id
+            elif request.user.role == "manager":
+                # Managers can assign to themselves or their team members
+                if assigned_to_id != request.user.id:
+                    team_member_ids = User.objects.filter(manager=request.user).values_list('id', flat=True)
+                    if assigned_to_id not in team_member_ids:
+                        return Response(
+                            {"error": "You can only assign tasks to your team members."},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+            # Admins can assign to anyone (no restriction)
+            
+            assigned_user = get_object_or_404(User, id=assigned_to_id)
+            
+            # Managers cannot assign tasks to other managers/admins
+            if request.user.role == "manager" and assigned_user.role in ["manager", "admin"]:
+                return Response(
+                    {"error": "You cannot assign tasks to managers or admins."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            serializer.save(created_by=request.user, assigned_to=assigned_user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TaskDetailView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_task(self, pk, user):
+        """Get task only if user has access"""
+        task = get_object_or_404(Task, pk=pk)
+        
+        # Admin can access all tasks
+        if user.role == "admin":
+            return task
+        
+        # User owns the task (assigned or created)
+        if task.assigned_to == user or task.created_by == user:
+            return task
+        
+        # Manager can access tasks of their team members
+        if user.role == "manager":
+            team_member_ids = User.objects.filter(manager=user).values_list('id', flat=True)
+            if task.assigned_to_id in team_member_ids or task.created_by_id in team_member_ids:
+                return task
+        
+        return None
+
+    def get(self, request, pk):
+        task = self.get_task(pk, request.user)
+        if not task:
+            return Response({"error": "Not allowed."}, status=status.HTTP_403_FORBIDDEN)
+        return Response(TaskSerializer(task).data)
+
+    def put(self, request, pk):
+        task = self.get_task(pk, request.user)
+        if not task:
+            return Response({"error": "Not allowed."}, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = TaskSerializer(task, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        task = self.get_task(pk, request.user)
+        if not task:
+            return Response({"error": "Not allowed."}, status=status.HTTP_403_FORBIDDEN)
+        task.delete()
+        return Response({"message": "✅ Task deleted."}, status=status.HTTP_200_OK)
+

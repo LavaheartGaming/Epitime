@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.db import IntegrityError
-from .models import User, TimeEntry, TeamStatus
+from .models import User, TimeEntry, TeamStatus, Task
 
 class UserSerializer(serializers.ModelSerializer):
     manager_id = serializers.IntegerField(required=False, allow_null=True)
@@ -70,3 +70,24 @@ class TeamStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = TeamStatus
         fields = ["id", "user", "date", "status", "note", "updated_at"]
+
+
+class TaskSerializer(serializers.ModelSerializer):
+    assigned_to_name = serializers.SerializerMethodField()
+    created_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Task
+        fields = [
+            "id", "title", "description", "priority", "estimated_duration",
+            "progress", "due_date", "created_by", "assigned_to",
+            "assigned_to_name", "created_by_name", "created_at", "updated_at"
+        ]
+        read_only_fields = ["created_by", "assigned_to", "created_at", "updated_at"]
+
+    def get_assigned_to_name(self, obj):
+        return obj.assigned_to.full_name if obj.assigned_to else None
+
+    def get_created_by_name(self, obj):
+        return obj.created_by.full_name if obj.created_by else None
+

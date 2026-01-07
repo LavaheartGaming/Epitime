@@ -2,7 +2,8 @@ from django.urls import path
 from .views import (
     TeamTimeEntryUpsertView, UserListCreateView, RegisterView, LoginView, UpdateUserView,
     ChangePasswordView, DeleteAccountView, Enable2FAView, Verify2FAView,ClockInView, ClockOutView, TimeEntryListView, TeamMembersView,
-    AdminAssignManagerView, TeamMemberTimeEntriesView, TeamStatusSetView, MyTodayStatusView, MyTeamView
+    AdminAssignManagerView, TeamMemberTimeEntriesView, TeamStatusSetView, MyTodayStatusView, MyTeamView,
+    TaskListCreateView, TaskDetailView
 )
 
 urlpatterns = [
@@ -24,5 +25,7 @@ urlpatterns = [
     path("team/time-entry/", TeamTimeEntryUpsertView.as_view(), name="team-time-entry-upsert"),
     path("me/status/", MyTodayStatusView.as_view(), name="my-today-status"),
     path("me/team/", MyTeamView.as_view(), name="my-team"),
+    path("tasks/", TaskListCreateView.as_view(), name="task-list-create"),
+    path("tasks/<int:pk>/", TaskDetailView.as_view(), name="task-detail"),
 
 ]

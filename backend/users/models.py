@@ -126,3 +126,39 @@ class TeamStatus(models.Model):
 
     def __str__(self):
         return f"{self.user.email} {self.date} -> {self.status}"
+
+
+class Task(models.Model):
+    PRIORITY_CHOICES = [
+        ("low", "Low"),
+        ("medium", "Medium"),
+        ("high", "High"),
+    ]
+
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, default="")
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default="medium")
+    estimated_duration = models.FloatField(default=1.0, help_text="Estimated duration in hours")
+    progress = models.IntegerField(default=0, help_text="Progress percentage 0-100")
+    due_date = models.DateTimeField(null=True, blank=True, help_text="Deadline date and time")
+
+    created_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="created_tasks",
+    )
+    assigned_to = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="assigned_tasks",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.title} ({self.priority}) - {self.assigned_to.full_name}"
+
