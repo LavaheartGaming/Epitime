@@ -27,7 +27,7 @@ export default function AccountPage() {
   const [otpCode, setOtpCode] = useState("");
 
   const [profile, setProfile] = useState({
-    username: user?.username || "",
+    full_name: user?.full_name || "",
     email: user?.email || "",
     phone_number: user?.phone_number || "",
   });
@@ -117,7 +117,7 @@ export default function AccountPage() {
             className="w-20 mx-auto mb-4"
           />
           <h1 className="text-3xl font-bold text-yellow-400 mb-2">
-            Hello, {user?.username} 👋
+            Hello, {user?.full_name} 👋
           </h1>
           <p className="text-sm text-gray-300">{user?.email}</p>
         </div>
@@ -145,9 +145,9 @@ export default function AccountPage() {
             <div className="bg-blue-900/60 border-t border-blue-700 rounded-b-xl p-5 space-y-3">
               <input
                 type="text"
-                value={profile.username}
-                onChange={(e) => setProfile({ ...profile, username: e.target.value })}
-                placeholder="Username"
+                value={profile.full_name}
+                onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                placeholder="Full name"
                 className="w-full bg-blue-900/50 border border-blue-700 rounded-lg p-3"
               />
               <input

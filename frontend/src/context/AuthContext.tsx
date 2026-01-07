@@ -2,14 +2,12 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 
 export interface User {
   id: number;
-  username: string;
+  full_name: string;
   email: string;
   role: string;
   phone_number: string;
   two_factor_enabled?: boolean;
 }
-
-
 
 interface AuthContextType {
   user: User | null;

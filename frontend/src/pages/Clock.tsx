@@ -1,57 +1,140 @@
-// Fichier : ClockDashboard.jsx (ou .tsx)
-
-import React, { useState } from "react";
-// Framer Motion est une librairie React standard, pas besoin de la remplacer.
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import {
-  Clock,
-  LogIn,
-  LogOut,
-  CheckCircle,
-  CalendarDays,
-  User,
-  BarChart2,
-} from "lucide-react";
+import { Clock, LogIn, LogOut, BarChart2, User } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
-// Suppression de "use client";
+
+interface TimeRecord {
+  date: string; // formatted date for display (from clock_in)
+  in?: string;
+  out?: string;
+  total?: number;
+}
+
 export function ClockDashboard() {
+  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+
   const [isClockedIn, setIsClockedIn] = useState(false);
-  const [userName, setUserName] = useState("John Doe");
-  const [records, setRecords] = useState<
-    { date: string; in?: string; out?: string; total?: number }[]
-  >([]);
+  const { user } = useAuth();
+
+  const [records, setRecords] = useState<TimeRecord[]>([]);
   const [today] = useState(new Date().toLocaleDateString());
   const [lastAction, setLastAction] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleClockIn = () => {
-    if (isClockedIn) return;
-    const time = new Date().toLocaleTimeString();
-    setIsClockedIn(true);
-    setLastAction(`Clocked in at ${time}`);
-    setRecords((prev) => [...prev, { date: today, in: time }]);
+  // Helper to call API with JWT
+  const fetchWithAuth = async (url: string, method = "GET", body?: any) => {
+    const token = localStorage.getItem("access_token");
+    const headers: any = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const options: any = { method, headers };
+    if (body) options.body = JSON.stringify(body);
+
+    return fetch(url, options);
   };
 
-  const handleClockOut = () => {
-    if (!isClockedIn) return;
-    const time = new Date().toLocaleTimeString();
-    setIsClockedIn(false);
-    setLastAction(`Clocked out at ${time}`);
-    setRecords((prev) =>
-      prev.map((r) =>
-        r.date === today
-          ? { ...r, out: time, total: Math.floor(Math.random() * 3 + 7) } // simulate total hours
-          : r
-      )
-    );
+  // Load time entries from backend
+  const loadRecords = async () => {
+    setLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/users/time-entries/`);
+      let data: any = [];
+      try {
+        data = await res.json();
+      } catch {
+        data = [];
+      }
+
+      if (!res.ok) {
+        setErrorMessage("Unable to load time entries.");
+        setRecords([]);
+        setIsClockedIn(false);
+        return;
+      }
+
+      // ✅ Each entry is a session: use clock_in for the displayed date
+      const mapped: TimeRecord[] = (Array.isArray(data) ? data : []).map((entry: any) => ({
+        date: entry.clock_in ? new Date(entry.clock_in).toLocaleDateString() : "-",
+        in: entry.clock_in ? new Date(entry.clock_in).toLocaleTimeString() : undefined,
+        out: entry.clock_out ? new Date(entry.clock_out).toLocaleTimeString() : undefined,
+        total: entry.total_hours ?? undefined,
+      }));
+
+      setRecords(mapped);
+
+      // ✅ Clocked in = there exists an open session (clock_out is null)
+      const hasOpenSession =
+        Array.isArray(data) && data.some((e: any) => e.clock_in && !e.clock_out);
+
+      setIsClockedIn(hasOpenSession);
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("⚠️ Server unreachable.");
+      setRecords([]);
+      setIsClockedIn(false);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const totalHours = records.reduce(
-    (acc, r) => acc + (r.total || 0),
-    0
-  );
-  const averageHours = records.length
-    ? (totalHours / records.length).toFixed(1)
-    : 0;
+  // ✅ Load once on mount
+  useEffect(() => {
+    loadRecords();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleClockIn = async () => {
+    setErrorMessage(null);
+
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/users/clock-in/`, "POST");
+      const data = await res.json();
+
+      if (res.ok) {
+        const time = data.entry?.clock_in
+          ? new Date(data.entry.clock_in).toLocaleTimeString()
+          : new Date().toLocaleTimeString();
+
+        setLastAction(`Clocked in at ${time}`);
+        await loadRecords();
+      } else {
+        setErrorMessage(data.error || "❌ Could not clock in.");
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("⚠️ Server unreachable.");
+    }
+  };
+
+  const handleClockOut = async () => {
+    setErrorMessage(null);
+
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/users/clock-out/`, "POST");
+      const data = await res.json();
+
+      if (res.ok) {
+        const time = data.entry?.clock_out
+          ? new Date(data.entry.clock_out).toLocaleTimeString()
+          : new Date().toLocaleTimeString();
+
+        setLastAction(`Clocked out at ${time}`);
+        await loadRecords();
+      } else {
+        setErrorMessage(data.error || "❌ Could not clock out.");
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("⚠️ Server unreachable.");
+    }
+  };
+
+  const totalHours = records.reduce((acc, r) => acc + (r.total || 0), 0);
+  const averageHours = records.length ? (totalHours / records.length).toFixed(1) : "0";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-950 via-blue-900 to-indigo-900 text-white flex flex-col items-center py-12 px-6">
@@ -66,9 +149,7 @@ export function ClockDashboard() {
           <Clock className="w-10 h-10 text-cyan-400" />
           My Workday Summary
         </h1>
-        <p className="text-blue-200 mt-1">
-          Track your working day, attendance, and time logs.
-        </p>
+        <p className="text-blue-200 mt-1">Track your working day, attendance, and time logs.</p>
       </motion.div>
 
       {/* User Info */}
@@ -82,7 +163,7 @@ export function ClockDashboard() {
             <User className="w-8 h-8 text-yellow-400" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">{userName}</h2>
+            <h2 className="text-xl font-semibold">{user ? user.full_name : "My dashboard"}</h2>
             <p className="text-sm text-blue-300">Software Engineer | Remote</p>
           </div>
         </div>
@@ -91,6 +172,12 @@ export function ClockDashboard() {
           <h3 className="font-bold text-lg text-cyan-400">{today}</h3>
         </div>
       </motion.div>
+
+      {errorMessage && (
+        <div className="mb-6 bg-red-500/20 border border-red-400 text-red-200 px-4 py-2 rounded-xl max-w-3xl w-full text-center">
+          {errorMessage}
+        </div>
+      )}
 
       {/* Clock Controls */}
       <motion.div
@@ -102,17 +189,15 @@ export function ClockDashboard() {
           <h2 className="text-2xl font-bold mb-2">
             {isClockedIn ? "You are clocked in!" : "You are clocked out."}
           </h2>
-          <p className="text-blue-200 text-sm">
-            {lastAction || "Start your workday by clocking in."}
-          </p>
+          <p className="text-blue-200 text-sm">{lastAction || "Start your workday by clocking in."}</p>
         </div>
 
         <div className="flex flex-wrap justify-center gap-6">
           <button
             onClick={handleClockIn}
-            disabled={isClockedIn}
+            disabled={loading || isClockedIn}
             className={`flex items-center gap-2 px-6 py-3 rounded-xl text-lg font-semibold transition-all ${
-              isClockedIn
+              loading || isClockedIn
                 ? "bg-slate-700 text-slate-400 cursor-not-allowed"
                 : "bg-emerald-400 text-slate-900 hover:bg-emerald-300"
             }`}
@@ -122,9 +207,9 @@ export function ClockDashboard() {
 
           <button
             onClick={handleClockOut}
-            disabled={!isClockedIn}
+            disabled={loading || !isClockedIn}
             className={`flex items-center gap-2 px-6 py-3 rounded-xl text-lg font-semibold transition-all ${
-              !isClockedIn
+              loading || !isClockedIn
                 ? "bg-slate-700 text-slate-400 cursor-not-allowed"
                 : "bg-red-400 text-slate-900 hover:bg-red-300"
             }`}
@@ -144,8 +229,8 @@ export function ClockDashboard() {
         {[
           { label: "Total Hours", value: `${totalHours}h`, color: "text-cyan-400" },
           { label: "Average", value: `${averageHours}h`, color: "text-cyan-400" },
-          { label: "Days Recorded", value: records.length, color: "text-green-400" },
-          { label: "Punctuality", value: "96%", color: "text-yellow-400" },
+          { label: "Sessions Logged", value: records.length, color: "text-green-400" },
+          { label: "Punctuality", value: "96%", color: "text-yellow-400" }, // placeholder
         ].map((s, i) => (
           <div
             key={i}
@@ -168,6 +253,7 @@ export function ClockDashboard() {
           <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
             <BarChart2 className="w-5 h-5 text-cyan-400" /> Attendance History
           </h3>
+
           <table className="w-full text-sm border-collapse text-left">
             <thead>
               <tr className="text-slate-300 border-b border-slate-700">
@@ -187,7 +273,7 @@ export function ClockDashboard() {
                   <td className="py-2 text-emerald-400">{r.in || "-"}</td>
                   <td className="py-2 text-red-400">{r.out || "-"}</td>
                   <td className="py-2 text-cyan-400">
-                    {r.total ? `${r.total}h` : "-"}
+                    {r.total !== undefined ? `${r.total}h` : "-"}
                   </td>
                 </tr>
               ))}

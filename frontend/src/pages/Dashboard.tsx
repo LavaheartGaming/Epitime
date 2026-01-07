@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-// Assurez-vous d'avoir 'react-router-dom' installé pour utiliser useNavigate
+import React, { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import {
   LineChart,
@@ -22,21 +22,6 @@ import {
   BarChart2,
 } from "lucide-react";
 
-
-const teammates = [
-  { id: 1, name: "Willy Wonka (Manager)", role: "Engineering Manager", status: "available" },
-  { id: 2, name: "Charlie Bucket", role: "Backend Developer", status: "busy" },
-  { id: 3, name: "Veruca Salt", role: "Frontend Developer", status: "available" },
-  { id: 4, name: "Mike Teevee", role: "QA Engineer", status: "available" },
-  { id: 5, name: "Violet Beauregarde", role: "DevOps", status: "away" },
-];
-
-const statuses = {
-  available: "bg-green-500",
-  busy: "bg-red-500",
-  away: "bg-yellow-400",
-};
-
 const tasks = [
   { title: "Refactor API endpoints", assignee: "Me", priority: "High", progress: 80, due: "2025-10-15" },
   { title: "Design new login UI", assignee: "Veruca", priority: "Medium", progress: 60, due: "2025-10-18" },
@@ -56,8 +41,56 @@ const mockDailyData = [
 
 // Le composant doit être englobé par un <Router> (React Router) pour que useNavigate fonctionne.
 export default function EpitimeDashboard() {
+  const { user } = useAuth();
   // Remplacement de useRouter() par useNavigate()
   const navigate = useNavigate(); 
+  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+  type TeamMate = {
+  id: number;
+  full_name: string;
+  email: string;
+  role: string;
+  is_clocked_in: boolean;
+  open_clock_in: string | null;
+  today_status: "normal" | "late" | "pto";
+  today_status_note: string;
+};
+
+const [team, setTeam] = useState<TeamMate[]>([]);
+const [teamManager, setTeamManager] = useState<TeamMate | null>(null);
+
+const fetchWithAuth = async (url: string) => {
+  const token = localStorage.getItem("access_token");
+  return fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+};
+
+useEffect(() => {
+  const loadTeam = async () => {
+    if (!user) return;
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/users/me/team/`);
+      const data = await res.json();
+      if (!res.ok) {
+        setTeam([]);
+        setTeamManager(null);
+        return;
+      }
+      setTeam(Array.isArray(data?.members) ? data.members : []);
+      setTeamManager(data?.manager || null);
+    } catch {
+      setTeam([]);
+      setTeamManager(null);
+    }
+  };
+
+  loadTeam();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [user]);
   const [mode, setMode] = useState<"daily" | "weekly">("daily");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedMate, setSelectedMate] = useState<any>(null);
@@ -65,6 +98,12 @@ export default function EpitimeDashboard() {
 
   const totalHours = mockDailyData.reduce((acc, cur) => acc + cur.hours, 0);
   const averageHours = (totalHours / mockDailyData.length).toFixed(1);
+
+  const displayTeam = useMemo(() => {
+  const list: TeamMate[] = [];
+  if (teamManager) list.push(teamManager); // 👈 manager clickable
+  return list.concat(team); // 👈 other members
+}, [teamManager, team]);
 
   return (
     <div className="min-h-screen bg-[#123A8A] text-white flex flex-col items-center py-10">
@@ -194,28 +233,61 @@ export default function EpitimeDashboard() {
 
       {/* Team Section */}
       <div className="bg-[#0F2658] rounded-2xl shadow-lg p-6 w-[90%] max-w-6xl mb-10">
-        <h2 className="text-xl font-bold mb-6 lowercase">my team</h2>
-        <div className="grid md:grid-cols-2 gap-6">
-          {teammates.map((tm) => (
-            <button
-              key={tm.id}
-              onClick={() => {
-                setSelectedMate(tm);
-                setDrawerOpen(true);
-              }}
-              className="flex justify-between items-center bg-slate-800/60 px-4 py-3 rounded-full hover:bg-slate-700 border border-slate-600 hover:border-cyan-400"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-slate-500" />
-                <div className="text-left">
-                  <div className="font-semibold text-sm">{tm.name}</div>
-                  <div className="text-xs text-slate-300">{tm.role}</div>
-                </div>
-              </div>
-              <span className={`w-3 h-3 rounded-full ${statuses[tm.status as keyof typeof statuses]}`} />
-            </button>
-          ))}
+        <h2 className="text-xl font-bold mb-2 lowercase">my team</h2>
+{teamManager && (
+  <div className="text-sm text-slate-300 mb-6">
+    Manager: <span className="text-yellow-300 font-semibold">{teamManager.full_name}</span>
+  </div>
+)}
+
+<div className="grid md:grid-cols-2 gap-6">
+  {displayTeam.length === 0 ? (
+    <div className="text-slate-300">
+      No manager assigned yet (ask an admin to assign you to a manager).
+    </div>
+  ) : (
+    displayTeam.map((tm) => (
+      <button
+        key={`tm-${tm.id}`}
+        onClick={() => {
+          setSelectedMate(tm);
+          setDrawerOpen(true);
+        }}
+        className="flex justify-between items-center bg-slate-800/60 px-4 py-3 rounded-full hover:bg-slate-700 border border-slate-600 hover:border-cyan-400"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-slate-500" />
+          <div className="text-left">
+            <div className="font-semibold text-sm">
+              {tm.full_name}
+              {teamManager && tm.id === teamManager.id && (
+                <span className="ml-2 text-xs text-yellow-300 font-semibold">
+                  (Manager)
+                </span>
+              )}
+            </div>
+            <div className="text-xs text-slate-300">{tm.role}</div>
+          </div>
         </div>
+
+        {/* Status dot (manager can still have one, optional but fine) */}
+        <span
+          className={`w-3 h-3 rounded-full ${
+            tm.today_status === "pto"
+              ? "bg-yellow-400"
+              : tm.today_status === "late"
+              ? "bg-red-500"
+              : tm.is_clocked_in
+              ? "bg-green-500"
+              : "bg-slate-400"
+          }`}
+        />
+      </button>
+    ))
+  )}
+</div>
+
+
       </div>
 
       {/* Tasks Section */}
@@ -267,7 +339,7 @@ export default function EpitimeDashboard() {
             <div className="p-6 border-b border-white/10 flex items-center justify-between">
               <div>
                 <div className="text-xs uppercase text-slate-400">teammate</div>
-                <div className="text-xl font-semibold">{selectedMate?.name}</div>
+                <div className="text-xl font-semibold">{selectedMate?.full_name}</div>
                 <div className="text-slate-400 text-sm">{selectedMate?.role}</div>
               </div>
               <button
