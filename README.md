@@ -6,33 +6,33 @@ It features a **frontend**, a **backend**, and uses **Docker Compose** for easy 
 
 ---
 
-## 📌 Table of Contents
+## Table of Contents
 
-- [📌 Table of Contents](#-table-of-contents)  
-- [🚀 About](#-about)  
-- [🧠 Features](#-features)  
-- [📁 Project Structure](#-project-structure)  
-- [⚙️ Technologies](#️-technologies)  
-- [🚀 Getting Started](#-getting-started)  
+- [ Table of Contents](#-table-of-contents)  
+- [ About](#-about)  
+- [ Features](#-features)  
+- [ Project Structure](#-project-structure)  
+- [ Technologies](#️-technologies)  
+- [ Getting Started](#-getting-started)  
   - [Prerequisites](#prerequisites)  
   - [Installation](#installation)  
   - [Running the App](#running-the-app)  
-- [🧪 Development](#-development)  
-- [🧩 Environment Variables](#-environment-variables)  
-- [📦 Deployment](#-deployment)  
-- [📄 License](#-license)  
-- [👥 Contributors](#-contributors)
+- [ Development](#-development)  
+- [ Environment Variables](#-environment-variables)  
+- [ Deployment](#-deployment)  
+- [ License](#-license)  
+- [ Contributors](#-contributors)
 
 ---
 
-## 🚀 About
+##  About
 
 Epitime is a **time-tracking / manager application** created as part of the Epitech curriculum.  
 The goal is to provide users with the ability to track time, manage tasks, and organize schedules via a modern web interface backed by a robust API.
 
 ---
 
-## 🧠 Features
+##  Features
 
 ✔ User authentication  
 ✔ Time tracking  
@@ -43,7 +43,7 @@ The goal is to provide users with the ability to track time, manage tasks, and o
 
 ---
 
-## 📁 Project Structure
+##  Project Structure
 
 Epitime/
 ├── backend/ # Backend API service
@@ -55,7 +55,7 @@ Epitime/
 
 ---
 
-## ⚙️ Technologies
+##  Technologies
 
 The project uses modern technologies across both client and server:
 
@@ -76,11 +76,11 @@ The project uses modern technologies across both client and server:
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 Use these instructions to get a copy of the project running on your local machine.
 
-### 🧰 Prerequisites
+###  Prerequisites
 
 Install the following tools:
 
@@ -89,7 +89,7 @@ Install the following tools:
 
 ---
 
-### 📌 Installation
+###  Installation
 
 1. **Clone the repo**
    ```bash
@@ -116,10 +116,10 @@ This will start all required services. By default:
     Backend API ➤ http://localhost:8000
 
 (Adjust ports based on your setup)
-🧪 Development
+Development
 
 If you want to run services separately:
-🧩 Backend
+Backend
 
 cd backend
 # install dependencies
@@ -127,7 +127,7 @@ npm install       # or pip install -r requirements.txt
 # run server
 npm start         # or equivalent
 
-🧩 Frontend
+ Frontend
 
 cd frontend
 # install dependencies
@@ -135,7 +135,7 @@ npm install
 # start dev server
 npm start
 
-🧩 Environment Variables
+Environment Variables
 
 Environment variables should be defined for:
 
@@ -152,7 +152,7 @@ REACT_APP_API_URL=
 OTHER_FRONTEND_KEYS=
 
 Adjust values as needed.
-📦 Deployment
+Deployment
 
 To deploy the application:
 
@@ -166,26 +166,11 @@ To deploy the application:
 
     Run with Docker on your server
 
-📄 License
+License
 
 This project is open source and available under the MIT License (or another license if specified).
-👥 Contributors
+ Contributors
 
     LavaheartGaming – Project owner
 
     lucavdb06 – Contributor
-
-
----
-
-### ✨ Tips for polishing your README
-
-- Add screenshots / demo gifs under **About**.
-- Update **Technologies** with the exact stack (React, FastAPI, Express, etc.).
-- Include API documentation and usage examples if available.
-- Add **badges** for build status, license, etc.
-
----
-
-If you want, I can also generate **API docs**, **frontend usage examples**, or **Docker environment samples** tailored to this specific repository — just let me know!
-::contentReference[oaicite:0]{index=0}
