@@ -37,7 +37,7 @@ export default function LoginPage() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
 
- const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
     phone_number: "",
@@ -53,15 +53,15 @@ export default function LoginPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const endpoint = isLogin
-    ? `${API_URL}/api/users/login/`
-    : `${API_URL}/api/users/register/`;
+    const endpoint = isLogin
+      ? `${API_URL}/api/users/login/`
+      : `${API_URL}/api/users/register/`;
 
-  const payload = isLogin
-    ? { email: formData.email, password: formData.password }
-    : {
+    const payload = isLogin
+      ? { email: formData.email, password: formData.password }
+      : {
         email: formData.email,
         password: formData.password,
         first_name: formData.first_name,
@@ -69,67 +69,62 @@ export default function LoginPage() {
         phone_number: formData.phone_number,
       };
 
-  try {
-    console.log(" Sending request to:", endpoint, "with payload:", payload);
-
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    // 🔍 Try to parse JSON safely
-    let data: any = null;
     try {
-      data = await response.json();
-    } catch (err) {
-      console.error("❌ Failed to parse JSON response:", err);
-    }
 
-    console.log("🔹 Response status:", response.status, "data:", data);
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    if (response.ok) {
-      setNotificationMessage(
-        isLogin ? "✅ Login successful!" : "✅ Account created successfully!"
-      );
-
-      if (isLogin && data && data.access && data.user) {
-        localStorage.setItem("access_token", data.access);
-        login(data.user);
+      // 🔍 Try to parse JSON safely
+      let data: any = null;
+      try {
+        data = await response.json();
+      } catch {
+        // Failed to parse JSON response
       }
 
-      setTimeout(() => navigate("/account"), 1000);
-    } else {
-      // 🧠 Build a meaningful error message
-      let message =
-        (data && (data.error || data.detail)) ||
-        "";
+      if (response.ok) {
+        setNotificationMessage(
+          isLogin ? "✅ Login successful!" : "✅ Account created successfully!"
+        );
 
-      // If it's a validation error dict: { "email": ["..."], "password": ["..."] }
-      if (!message && data && typeof data === "object") {
-        const keys = Object.keys(data);
-        if (keys.length > 0) {
-          const firstKey = keys[0];               // e.g. "email"
-          const firstVal = (data as any)[firstKey];
+        if (isLogin && data && data.access && data.user) {
+          localStorage.setItem("access_token", data.access);
+          login(data.user);
+        }
 
-          if (Array.isArray(firstVal) && firstVal.length > 0) {
-            message = firstVal[0];
-          } else if (typeof firstVal === "string") {
-            message = firstVal;
+        setTimeout(() => navigate("/account"), 1000);
+      } else {
+        // 🧠 Build a meaningful error message
+        let message =
+          (data && (data.error || data.detail)) ||
+          "";
+
+        // If it's a validation error dict: { "email": ["..."], "password": ["..."] }
+        if (!message && data && typeof data === "object") {
+          const keys = Object.keys(data);
+          if (keys.length > 0) {
+            const firstKey = keys[0];               // e.g. "email"
+            const firstVal = (data as any)[firstKey];
+
+            if (Array.isArray(firstVal) && firstVal.length > 0) {
+              message = firstVal[0];
+            } else if (typeof firstVal === "string") {
+              message = firstVal;
+            }
           }
         }
-      }
 
-      console.warn("⚠️ Server returned 4xx/5xx with message:", message);
-      setNotificationMessage(
-        message || "❌ Invalid credentials or incomplete fields."
-      );
+        setNotificationMessage(
+          message || "❌ Invalid credentials or incomplete fields."
+        );
+      }
+    } catch {
+      setNotificationMessage("⚠️ Server unreachable. Try again later.");
     }
-  } catch (err) {
-    console.error("🌐 Network or fetch error:", err);
-    setNotificationMessage("⚠️ Server unreachable. Try again later.");
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center text-white px-4 py-10">
@@ -154,7 +149,7 @@ export default function LoginPage() {
           {isLogin ? "Login" : "Sign Up"}
         </h2>
 
-         <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {!isLogin && (
             <div className="flex gap-4">
               <div className="w-1/2">
@@ -274,9 +269,9 @@ export default function LoginPage() {
               />
               <label htmlFor="acceptTerms">
                 I agree to the{" "}
-                <a href="#" className="text-yellow-400 hover:underline">
+                <button type="button" className="text-yellow-400 hover:underline">
                   terms of service
-                </a>
+                </button>
                 .
               </label>
             </div>

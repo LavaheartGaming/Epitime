@@ -12,18 +12,7 @@ import {
 } from "recharts";
 // Framer Motion est une librairie React standard
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Clock,
-  LogIn,
-  LogOut,
-  CheckCircle,
-  CalendarDays,
-  User,
-  BarChart2,
-  Plus,
-  X,
-  Trash2,
-} from "lucide-react";
+import { Plus, X, Trash2 } from "lucide-react";
 
 type TaskType = {
   id: number;
@@ -56,7 +45,7 @@ export default function EpitimeDashboard() {
   const [team, setTeam] = useState<TeamMate[]>([]);
   const [teamManager, setTeamManager] = useState<TeamMate | null>(null);
   const [timeEntries, setTimeEntries] = useState<any[]>([]);
-  const [loadingEntries, setLoadingEntries] = useState(false);
+  const [_loadingEntries, setLoadingEntries] = useState(false);
 
   const fetchWithAuth = async (url: string) => {
     const token = localStorage.getItem("access_token");
@@ -168,8 +157,8 @@ export default function EpitimeDashboard() {
         setNewTask({ title: "", priority: "medium", estimated_duration: 1, due_date: "" });
         setShowTaskModal(false);
       }
-    } catch (err) {
-      console.error("Failed to create task", err);
+    } catch {
+      // Failed to create task
     } finally {
       setTaskLoading(false);
     }
@@ -191,8 +180,8 @@ export default function EpitimeDashboard() {
       if (res.ok) {
         setTasks((prev) => prev.filter((t) => t.id !== taskId));
       }
-    } catch (err) {
-      console.error("Failed to delete task", err);
+    } catch {
+      // Failed to delete task
     }
   };
 

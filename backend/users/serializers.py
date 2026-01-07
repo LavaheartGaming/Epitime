@@ -1,6 +1,8 @@
-from rest_framework import serializers
 from django.db import IntegrityError
-from .models import User, TimeEntry, TeamStatus, Task
+from rest_framework import serializers
+
+from .models import Task, TeamStatus, TimeEntry, User
+
 
 class UserSerializer(serializers.ModelSerializer):
     manager_id = serializers.IntegerField(required=False, allow_null=True)
@@ -43,7 +45,7 @@ class UserSerializer(serializers.ModelSerializer):
         except IntegrityError:
             raise serializers.ValidationError({
                 "email": "❌ This email is already registered."
-            })
+            }) from None
 
         return user
 

@@ -5,3 +5,8 @@ python-dotenv
 django-cors-headers
 django-otp
 djangorestframework-simplejwt
+
+# Development & Testing
+ruff
+pytest
+pytest-django

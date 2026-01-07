@@ -1,5 +1,7 @@
-from pathlib import Path
 import os
+from datetime import timedelta
+from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -67,7 +69,7 @@ DATABASES = {
         'NAME': os.getenv('DB_NAME', 'epitime'),
         'USER': os.getenv('DB_USER', 'epitime_user'),
         'PASSWORD': os.getenv('DB_PASSWORD', 'epitime_pass'),
-        'HOST': os.getenv('DB_HOST', 'db'), 
+        'HOST': os.getenv('DB_HOST', 'db'),
         'PORT': os.getenv('DB_PORT', '3306'),
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
@@ -97,8 +99,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # === CORS (Frontend React) ===
 CORS_ALLOW_ALL_ORIGINS = True
-
-from datetime import timedelta
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

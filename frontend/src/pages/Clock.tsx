@@ -25,7 +25,6 @@ export function ClockDashboard() {
 
   // Signature state
   const [showSignatureModal, setShowSignatureModal] = useState(false);
-  const [signatureData, setSignatureData] = useState<string | null>(null);
 
   // Helper to call API with JWT
   const fetchWithAuth = async (url: string, method = "GET", body?: any) => {
@@ -75,8 +74,7 @@ export function ClockDashboard() {
         Array.isArray(data) && data.some((e: any) => e.clock_in && !e.clock_out);
 
       setIsClockedIn(hasOpenSession);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setErrorMessage("⚠️ Server unreachable.");
       setRecords([]);
       setIsClockedIn(false);
@@ -98,7 +96,6 @@ export function ClockDashboard() {
 
   // Called when signature is confirmed
   const confirmClockIn = async (sig: string) => {
-    setSignatureData(sig);
     setShowSignatureModal(false);
     setErrorMessage(null);
     setLoading(true);
@@ -120,8 +117,7 @@ export function ClockDashboard() {
       } else {
         setErrorMessage(data.error || "❌ Could not clock in.");
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       setErrorMessage("⚠️ Server unreachable.");
     } finally {
       setLoading(false);
@@ -145,8 +141,7 @@ export function ClockDashboard() {
       } else {
         setErrorMessage(data.error || "❌ Could not clock out.");
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       setErrorMessage("⚠️ Server unreachable.");
     }
   };

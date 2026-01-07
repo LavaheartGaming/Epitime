@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { Clock, Users, BarChart3, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -8,12 +8,6 @@ import { Link } from "react-router-dom";
 
 const Home: React.FC = () => {
   const { user } = useAuth();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    setIsLoggedIn(!!token);
-  }, []);
 
   const features = [
     {
@@ -45,9 +39,6 @@ const Home: React.FC = () => {
     { number: "98%", label: "Satisfaction Rate" },
   ];
 
-  const handleClockRedirect = () => {
-    window.location.href = isLoggedIn ? "/clock" : "/login";
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-900 via-blue-800 to-indigo-900 text-white">
@@ -69,16 +60,16 @@ const Home: React.FC = () => {
           <div className="flex justify-center gap-4 flex-wrap">
             {!user && (
               <Link to="/login">
-            <button className="...">Login</button>
-            </Link>
+                <button className="...">Login</button>
+              </Link>
             )}
 
             <Link
-          to="/clock"
-          className="bg-transparent border-2 border-yellow-400 text-yellow-400 px-8 py-3 rounded-full font-semibold hover:bg-yellow-400 hover:text-gray-900 transition-all transform hover:scale-105"
-        >
-          Clock In
-        </Link>
+              to="/clock"
+              className="bg-transparent border-2 border-yellow-400 text-yellow-400 px-8 py-3 rounded-full font-semibold hover:bg-yellow-400 hover:text-gray-900 transition-all transform hover:scale-105"
+            >
+              Clock In
+            </Link>
           </div>
         </motion.div>
 

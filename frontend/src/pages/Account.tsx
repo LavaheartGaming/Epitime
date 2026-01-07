@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import {
   User,
@@ -197,8 +197,8 @@ export default function AccountPage() {
                     f === "old_password"
                       ? "Old password"
                       : f === "new_password"
-                      ? "New password"
-                      : "Confirm password"
+                        ? "New password"
+                        : "Confirm password"
                   }
                   value={(passwordData as any)[f]}
                   onChange={(e) => setPasswordData({ ...passwordData, [f]: e.target.value })}

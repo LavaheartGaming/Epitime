@@ -1,19 +1,19 @@
-from rest_framework import generics, permissions, status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.permissions import BasePermission
-from django.shortcuts import get_object_or_404
-from .models import User, TimeEntry, TeamStatus, Task
-from .serializers import UserSerializer, TimeEntrySerializer, TeamStatusSerializer, TaskSerializer
-from django.utils import timezone
-from django.db import models
+import time
 
+from django.db import models
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django_otp.oath import TOTP
 from django_otp.util import random_hex
-import time
+from rest_framework import generics, permissions, status
+from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from .models import Task, TeamStatus, TimeEntry, User
+from .serializers import TaskSerializer, TeamStatusSerializer, TimeEntrySerializer, UserSerializer
 
 
 # === Liste et création des utilisateurs ===
@@ -215,7 +215,7 @@ class TimeEntryListView(APIView):
     def get(self, request):
         entries = TimeEntry.objects.filter(user=request.user).order_by("-clock_in")[:200]
         return Response(TimeEntrySerializer(entries, many=True).data, status=status.HTTP_200_OK)
-    
+
 # ---- Permissions ----
 class IsManagerOrAdmin(BasePermission):
     def has_permission(self, request, view):
@@ -388,7 +388,7 @@ class AdminAssignManagerView(APIView):
             return Response({"error": "user_id is required."}, status=400)
 
         target = get_object_or_404(User, id=user_id)
-        
+
         # Managers cannot manage other managers/admins
         if request.user.role == "manager" and target.role in ["manager", "admin"]:
             return Response({"error": "You cannot manage other managers or admins."}, status=403)
@@ -397,7 +397,7 @@ class AdminAssignManagerView(APIView):
             # Managers can only remove from their own team
             if request.user.role == "manager" and target.manager_id != request.user.id:
                 return Response({"error": "You can only remove users from your own team."}, status=403)
-            
+
             target.manager = None
             target.save()
             return Response({"message": "✅ Manager removed."}, status=200)
@@ -405,7 +405,7 @@ class AdminAssignManagerView(APIView):
         manager_user = get_object_or_404(User, id=manager_id)
         if manager_user.role not in ["manager", "admin"]:
             return Response({"error": "manager_id must be a manager/admin user."}, status=400)
-        
+
         # Managers can only assign to themselves
         if request.user.role == "manager" and manager_id != request.user.id:
             return Response({"error": "You can only assign users to yourself."}, status=403)
@@ -413,7 +413,7 @@ class AdminAssignManagerView(APIView):
         target.manager = manager_user
         target.save()
         return Response({"message": "✅ Manager assigned.", "user_id": target.id, "manager_id": manager_user.id}, status=200)
-    
+
 class MyTodayStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -430,7 +430,7 @@ class MyTodayStatusView(APIView):
             return Response({
                 "status": "normal"
             })
-        
+
 class MyTeamView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -526,7 +526,7 @@ class TaskListCreateView(APIView):
             tasks = Task.objects.filter(
                 models.Q(assigned_to=request.user) | models.Q(created_by=request.user)
             ).distinct().order_by("-created_at")
-        
+
         return Response(TaskSerializer(tasks, many=True).data, status=status.HTTP_200_OK)
 
     def post(self, request):
@@ -534,7 +534,7 @@ class TaskListCreateView(APIView):
         serializer = TaskSerializer(data=request.data)
         if serializer.is_valid():
             assigned_to_id = request.data.get("assigned_to", request.user.id)
-            
+
             # Regular users can only assign to themselves
             if request.user.role == "user":
                 assigned_to_id = request.user.id
@@ -548,16 +548,16 @@ class TaskListCreateView(APIView):
                             status=status.HTTP_403_FORBIDDEN
                         )
             # Admins can assign to anyone (no restriction)
-            
+
             assigned_user = get_object_or_404(User, id=assigned_to_id)
-            
+
             # Managers cannot assign tasks to other managers/admins
             if request.user.role == "manager" and assigned_user.role in ["manager", "admin"]:
                 return Response(
                     {"error": "You cannot assign tasks to managers or admins."},
                     status=status.HTTP_403_FORBIDDEN
                 )
-            
+
             serializer.save(created_by=request.user, assigned_to=assigned_user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -570,21 +570,21 @@ class TaskDetailView(APIView):
     def get_task(self, pk, user):
         """Get task only if user has access"""
         task = get_object_or_404(Task, pk=pk)
-        
+
         # Admin can access all tasks
         if user.role == "admin":
             return task
-        
+
         # User owns the task (assigned or created)
         if task.assigned_to == user or task.created_by == user:
             return task
-        
+
         # Manager can access tasks of their team members
         if user.role == "manager":
             team_member_ids = User.objects.filter(manager=user).values_list('id', flat=True)
             if task.assigned_to_id in team_member_ids or task.created_by_id in team_member_ids:
                 return task
-        
+
         return None
 
     def get(self, request, pk):
@@ -597,7 +597,7 @@ class TaskDetailView(APIView):
         task = self.get_task(pk, request.user)
         if not task:
             return Response({"error": "Not allowed."}, status=status.HTTP_403_FORBIDDEN)
-        
+
         serializer = TaskSerializer(task, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()

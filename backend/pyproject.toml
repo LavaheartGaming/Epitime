@@ -1,0 +1,42 @@
+[tool.ruff]
+# Target Python 3.11
+target-version = "py311"
+
+# Line length to match common standards
+line-length = 120
+
+# Exclude common directories
+exclude = [
+    ".git",
+    "__pycache__",
+    "migrations",
+    ".venv",
+    "venv",
+]
+
+[tool.ruff.lint]
+# Enable recommended rules
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort (import sorting)
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "DJ",     # flake8-django
+]
+
+# Ignore rules that don't apply well to Django projects
+ignore = [
+    "E501",   # Line too long (handled by formatter)
+    "DJ001",  # Avoid using null=True on string-based fields (common in Django)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["api", "users"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "api.settings"
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-v --tb=short"
