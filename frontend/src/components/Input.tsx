@@ -66,6 +66,7 @@ export const Input: React.FC<InputProps> = ({
                     `${helpText ? helpId : ''} ${hasError ? errorId : ''}`.trim() || undefined
                 }
                 className={`input ${hasError ? 'input-error' : ''}`}
+                style={{ minHeight: '44px' }}
             />
 
             {hasError && (

@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { axe, toHaveNoViolations } from 'jest-axe';
+import { axe } from 'jest-axe';
 import { Modal } from './Modal';
 
-expect.extend(toHaveNoViolations);
 
 describe('Modal Accessibility Tests', () => {
     it('should not have accessibility violations', async () => {
@@ -75,19 +74,30 @@ describe('Modal Accessibility Tests', () => {
             </Modal>
         );
 
+        const closeButton = screen.getByRole('button', { name: /fermer/i });
         const firstButton = screen.getByText('First');
         const thirdButton = screen.getByText('Third');
 
-        // Tab through all elements
+        // Initial focus is on container, so Tab moves to first focusable: Close Button
         await user.tab();
-        await user.tab();
-        await user.tab();
-        await user.tab();
+        expect(closeButton).toHaveFocus();
 
-        // Should cycle back to first focusable element
+        // Tab -> First Content Button
+        await user.tab();
         expect(firstButton).toHaveFocus();
 
-        // Shift+Tab should go to last element
+        // Tab -> Second
+        await user.tab();
+
+        // Tab -> Third
+        await user.tab();
+        expect(thirdButton).toHaveFocus();
+
+        // Tab -> Wraps to Close Button
+        await user.tab();
+        expect(closeButton).toHaveFocus();
+
+        // Shift+Tab -> Wraps back to Third
         await user.tab({ shift: true });
         expect(thirdButton).toHaveFocus();
     });

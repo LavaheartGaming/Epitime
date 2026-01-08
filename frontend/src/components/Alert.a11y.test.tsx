@@ -1,8 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { axe, toHaveNoViolations } from 'jest-axe';
+import { axe } from 'jest-axe';
 import { Alert } from './Alert';
 
-expect.extend(toHaveNoViolations);
 
 describe('Alert Accessibility Tests', () => {
     it('should not have accessibility violations', async () => {

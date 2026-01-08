@@ -1,9 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { axe, toHaveNoViolations } from 'jest-axe';
+import { axe } from 'jest-axe';
 import { Input } from './Input';
 
-expect.extend(toHaveNoViolations);
 
 describe('Input Accessibility Tests', () => {
     it('should not have accessibility violations', async () => {

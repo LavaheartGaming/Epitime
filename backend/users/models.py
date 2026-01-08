@@ -35,6 +35,21 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, first_name, last_name, phone_number, password, **extra_fields)
 
 
+class Team(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="created_teams"
+    )
+
+    def __str__(self):
+        return self.name
+
+
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=100)
@@ -50,13 +65,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="user")
 
     # ✅ NEW: link user to a manager (team assignment)
-    manager = models.ForeignKey(
-        "self",
+    # ✅ NEW: link user to a Team (replaces manager field)
+    team = models.ForeignKey(
+        Team,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="team_members",
-        limit_choices_to={"role__in": ["manager", "admin"]},
+        related_name="members",
     )
 
     is_active = models.BooleanField(default=True)

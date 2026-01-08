@@ -1,9 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { axe, toHaveNoViolations } from 'jest-axe';
+import { axe } from 'jest-axe';
 import { Button } from './Button';
 
-// Extend Jest matchers
-expect.extend(toHaveNoViolations);
 
 describe('Button Accessibility Tests', () => {
     it('should not have accessibility violations', async () => {

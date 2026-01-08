@@ -38,6 +38,7 @@ export const Button: React.FC<ButtonProps> = ({
             aria-describedby={ariaDescribedBy}
             aria-disabled={isDisabled}
             aria-busy={loading}
+            style={{ minHeight: '44px' }}
         >
             {loading && (
                 <span className="btn-spinner" aria-hidden="true">

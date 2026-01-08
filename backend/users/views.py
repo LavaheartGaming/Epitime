@@ -8,8 +8,24 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Task, TeamStatus, TimeEntry, User
+from .models import Task, Team, TeamStatus, TimeEntry, User
 from .serializers import TaskSerializer, TeamStatusSerializer, TimeEntrySerializer, UserSerializer
+from rest_framework import serializers
+
+class TeamSerializer(serializers.ModelSerializer):
+    members_count = serializers.IntegerField(source='members.count', read_only=True)
+    managers = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Team
+        fields = ['id', 'name', 'description', 'created_at', 'members_count', 'managers']
+
+    def get_managers(self, obj):
+        return [
+            {"id": m.id, "full_name": m.full_name, "email": m.email} 
+            for m in obj.members.filter(role__in=['manager', 'admin'])
+        ]
+
 
 
 # === Liste et création des utilisateurs ===
@@ -187,11 +203,10 @@ class IsAdmin(BasePermission):
 
 
 def _is_in_manager_team(manager_user, target_user) -> bool:
-    """Check if target_user is manageable by manager_user.
-    Managers can only manage regular users, not other managers/admins."""
-    if target_user.role in ["manager", "admin"]:
-        return False  # Managers cannot manage other managers/admins
-    return target_user.manager_id == manager_user.id
+    """Check if target_user is in the same team as manager_user."""
+    if not manager_user.team_id or not target_user.team_id:
+        return False
+    return manager_user.team_id == target_user.team_id
 
 
 # ---- Team Manager: list team members with live clocked-in + today's status ----
@@ -202,14 +217,20 @@ class TeamMembersView(APIView):
     def get(self, request):
         today = timezone.localdate()
 
+        # Admin or Manager: return list of members in their team (or all appropriate context)
+        # For Admin: list all users? Or maybe list by team?
+        # The frontend expects a flat list for "Manage Team" view, but now we have explicit teams.
+        # Let's adapt: if Admin, return ALL users. If Manager, return ONLY team members.
+        
         if request.user.role == "admin":
-            users_qs = User.objects.all().order_by("last_name", "first_name")
+             users_qs = User.objects.all().select_related('team').order_by("last_name", "first_name")
         elif request.user.role == "manager":
-            # Managers see all users but can only manage regular users
-            users_qs = User.objects.all().order_by("last_name", "first_name")
+            if not request.user.team_id:
+                users_qs = User.objects.none()
+            else:
+                users_qs = User.objects.filter(team_id=request.user.team_id).order_by("last_name", "first_name")
         else:
-            # Regular users shouldn't access this endpoint
-            users_qs = User.objects.none()
+            return Response({"error": "Unauthorized"}, status=403)
 
         # open session info
         open_entries = TimeEntry.objects.filter(user__in=users_qs, clock_out__isnull=True)
@@ -228,8 +249,8 @@ class TeamMembersView(APIView):
                     "full_name": u.full_name,
                     "email": u.email,
                     "role": u.role,
-                    "manager_id": u.manager_id,
-                    "manager_name": u.manager.full_name if u.manager else None,
+                    "team_id": u.team_id,
+                    "team_name": u.team.name if u.team else None,
                     "is_clocked_in": bool(open_entry),
                     "open_clock_in": open_entry.clock_in.isoformat() if open_entry else None,
                     "today_status": status_obj.status if status_obj else "normal",
@@ -338,51 +359,65 @@ class TeamTimeEntryUpsertView(APIView):
 
 
 # ---- Admin only: assign or remove user -> manager ----
-class AdminAssignManagerView(APIView):
+# ---- Admin: Create/List Teams ----
+class TeamListCreateView(generics.ListCreateAPIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated, IsManagerOrAdmin]
+    permission_classes = [permissions.IsAuthenticated] # Custom logic in methods
+    serializer_class = TeamSerializer
+    queryset = Team.objects.all()
+
+    def get_queryset(self):
+        # Admin sees all, Managers see their own? For now let's let admins manage teams.
+        # Helper: Admins check teams.
+        if self.request.user.role == 'admin':
+            return Team.objects.all().order_by("-created_at")
+        # Managers can see their own team info
+        if self.request.user.team:
+            return Team.objects.filter(id=self.request.user.team.id)
+        return Team.objects.none()
+
+    def create(self, request, *args, **kwargs):
+        if request.user.role != 'admin':
+            return Response({"error": "Only admins can create teams"}, status=403)
+        return super().create(request, *args, **kwargs)
+    
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+# ---- Admin: Update/Delete Team ----
+class TeamDetailView(generics.RetrieveUpdateDestroyAPIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+    queryset = Team.objects.all()
+    serializer_class = TeamSerializer
+
+
+# ---- Admin: Assign User to Team ----
+class AdminAssignTeamView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
 
     def put(self, request):
         user_id = request.data.get("user_id")
-        manager_id = request.data.get("manager_id")  # can be null to remove
-
-        # Convert to int if not None
-        if user_id is not None:
-            user_id = int(user_id)
-        if manager_id is not None:
-            manager_id = int(manager_id)
+        team_id = request.data.get("team_id") # Null to remove
 
         if not user_id:
-            return Response({"error": "user_id is required."}, status=400)
-
+             return Response({"error": "user_id is required"}, status=400)
+        
         target = get_object_or_404(User, id=user_id)
-
-        # Managers cannot manage other managers/admins
-        if request.user.role == "manager" and target.role in ["manager", "admin"]:
-            return Response({"error": "You cannot manage other managers or admins."}, status=403)
-
-        if manager_id is None:
-            # Managers can only remove from their own team
-            if request.user.role == "manager" and target.manager_id != request.user.id:
-                return Response({"error": "You can only remove users from your own team."}, status=403)
-
-            target.manager = None
+        
+        if team_id is None:
+            target.team = None
             target.save()
-            return Response({"message": "✅ Manager removed."}, status=200)
-
-        manager_user = get_object_or_404(User, id=manager_id)
-        if manager_user.role not in ["manager", "admin"]:
-            return Response({"error": "manager_id must be a manager/admin user."}, status=400)
-
-        # Managers can only assign to themselves
-        if request.user.role == "manager" and manager_id != request.user.id:
-            return Response({"error": "You can only assign users to yourself."}, status=403)
-
-        target.manager = manager_user
+            return Response({"message": "User removed from team."}, status=200)
+        
+        team = get_object_or_404(Team, id=team_id)
+        target.team = team
         target.save()
-        return Response(
-            {"message": "✅ Manager assigned.", "user_id": target.id, "manager_id": manager_user.id}, status=200
-        )
+        
+        return Response({"message": f"User assigned to team {team.name}"}, status=200)
+
 
 
 class MyTodayStatusView(APIView):
@@ -410,37 +445,39 @@ class MyTeamView(APIView):
         today = timezone.localdate()
 
         # Case 1: Manager -> their team is the users assigned to them
+        # Case 1: Manager / Admin
         if request.user.role in ["manager", "admin"]:
-            users_qs = User.objects.filter(manager=request.user)
+             # If manager has a team, show that team
+             if request.user.team:
+                 users_qs = User.objects.filter(team=request.user.team).exclude(id=request.user.id)
+                 manager_info = {
+                    "id": request.user.team.id,
+                    "full_name": request.user.team.name,
+                    "email": "",
+                    "role": "Team",
+                 }
+             else:
+                 users_qs = User.objects.none()
+                 manager_info = None
 
-            # exclude self (even if it somehow appears)
-            users_qs = users_qs.exclude(id=request.user.id)
-
-            manager_info = {
-                "id": request.user.id,
-                "full_name": request.user.full_name,
-                "email": request.user.email,
-                "role": request.user.role,
-            }
 
         # Case 2: Normal user -> team is everyone with the same manager
+        # Case 2: Normal user or Manager -> team is everyone in the same team
         else:
-            if not request.user.manager_id:
+            if not request.user.team_id:
                 return Response({"manager": None, "members": []})
 
-            manager = request.user.manager
+            team = request.user.team
+            users_qs = User.objects.filter(team=team).exclude(id=request.user.id)
 
-            users_qs = User.objects.filter(manager=manager)
-
-            # exclude self
-            users_qs = users_qs.exclude(id=request.user.id)
-
+            # We don't have a single "manager" anymore, but we can return team info
             manager_info = {
-                "id": manager.id,
-                "full_name": manager.full_name,
-                "email": manager.email,
-                "role": manager.role,
+                "id": team.id,
+                "full_name": team.name, # Using team name as "manager name" or refactor frontend
+                "email": "", 
+                "role": "Team",
             }
+
 
         users_qs = users_qs.order_by("last_name", "first_name")
 
@@ -484,8 +521,12 @@ class TaskListCreateView(APIView):
             # Admins see all tasks
             tasks = Task.objects.all().order_by("-created_at")
         elif request.user.role == "manager":
-            # Managers see tasks of their team + their own tasks
-            team_members = User.objects.filter(manager=request.user)
+            # Managers see tasks of their team members
+            if request.user.team:
+                team_members = User.objects.filter(team=request.user.team)
+            else:
+                team_members = User.objects.none()
+
             tasks = (
                 Task.objects.filter(
                     models.Q(assigned_to=request.user)
@@ -521,7 +562,8 @@ class TaskListCreateView(APIView):
             elif request.user.role == "manager":
                 # Managers can assign to themselves or their team members
                 if assigned_to_id != request.user.id:
-                    team_member_ids = list(User.objects.filter(manager=request.user).values_list("id", flat=True))
+                    team_member_ids = list(User.objects.filter(team=request.user.team).values_list("id", flat=True)) if request.user.team else []
+
                     if assigned_to_id not in team_member_ids:
                         return Response(
                             {"error": "You can only assign tasks to your team members."},
@@ -560,7 +602,11 @@ class TaskDetailView(APIView):
 
         # Manager can access tasks of their team members
         if user.role == "manager":
-            team_member_ids = User.objects.filter(manager=user).values_list("id", flat=True)
+            if user.team:
+                team_member_ids = User.objects.filter(team=user.team).values_list("id", flat=True)
+            else:
+                team_member_ids = []
+
             if task.assigned_to_id in team_member_ids or task.created_by_id in team_member_ids:
                 return task
 
@@ -589,3 +635,22 @@ class TaskDetailView(APIView):
             return Response({"error": "Not allowed."}, status=status.HTTP_403_FORBIDDEN)
         task.delete()
         return Response({"message": "✅ Task deleted."}, status=status.HTTP_200_OK)
+
+
+# ---- Admin: Reset User Password ----
+class AdminResetPasswordView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def post(self, request):
+        user_id = request.data.get("user_id")
+        new_password = request.data.get("new_password")
+
+        if not user_id or not new_password:
+            return Response({"error": "user_id and new_password are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        target_user = get_object_or_404(User, id=user_id)
+        target_user.set_password(new_password)
+        target_user.save()
+
+        return Response({"message": f"✅ Password for {target_user.email} has been reset."}, status=status.HTTP_200_OK)
