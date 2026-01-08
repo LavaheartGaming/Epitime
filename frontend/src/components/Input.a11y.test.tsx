@@ -77,11 +77,11 @@ describe('Input Accessibility Tests', () => {
     });
 
     it('should have minimum touch target size', () => {
-        const { container } = render(
+        render(
             <Input id="test" label="Test" value="" onChange={() => { }} />
         );
-        const input = container.querySelector('input');
-        const styles = window.getComputedStyle(input!);
+        const input = screen.getByLabelText(/test/i);
+        const styles = window.getComputedStyle(input);
 
         expect(parseInt(styles.minHeight)).toBeGreaterThanOrEqual(44);
     });

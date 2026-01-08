@@ -37,9 +37,9 @@ describe('Button Accessibility Tests', () => {
     });
 
     it('should have minimum touch target size (44x44px)', () => {
-        const { container } = render(<Button>Click</Button>);
-        const button = container.querySelector('button');
-        const styles = window.getComputedStyle(button!);
+        render(<Button>Click</Button>);
+        const button = screen.getByRole('button');
+        const styles = window.getComputedStyle(button);
 
         // Check min-height is at least 44px
         expect(parseInt(styles.minHeight)).toBeGreaterThanOrEqual(44);
