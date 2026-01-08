@@ -388,6 +388,12 @@ class AdminAssignManagerView(APIView):
         user_id = request.data.get("user_id")
         manager_id = request.data.get("manager_id")  # can be null to remove
 
+        # Convert to int if not None
+        if user_id is not None:
+            user_id = int(user_id)
+        if manager_id is not None:
+            manager_id = int(manager_id)
+
         if not user_id:
             return Response({"error": "user_id is required."}, status=400)
 
@@ -547,6 +553,9 @@ class TaskListCreateView(APIView):
         serializer = TaskSerializer(data=request.data)
         if serializer.is_valid():
             assigned_to_id = request.data.get("assigned_to", request.user.id)
+            # Ensure it's an integer
+            if assigned_to_id is not None:
+                assigned_to_id = int(assigned_to_id)
 
             # Regular users can only assign to themselves
             if request.user.role == "user":
@@ -554,7 +563,7 @@ class TaskListCreateView(APIView):
             elif request.user.role == "manager":
                 # Managers can assign to themselves or their team members
                 if assigned_to_id != request.user.id:
-                    team_member_ids = User.objects.filter(manager=request.user).values_list("id", flat=True)
+                    team_member_ids = list(User.objects.filter(manager=request.user).values_list("id", flat=True))
                     if assigned_to_id not in team_member_ids:
                         return Response(
                             {"error": "You can only assign tasks to your team members."},
