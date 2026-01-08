@@ -73,6 +73,7 @@ class TestTeam:
     def test_manager_view_team_member_entries(self, api_client, manager, employee):
         """GET /api/users/team/members/<user_id>/time-entries/ - Manager views employee time entries"""
         from django.utils import timezone
+
         from users.models import TimeEntry
 
         employee.manager = manager
@@ -90,6 +91,7 @@ class TestTeam:
     def test_manager_fix_time_entry(self, api_client, manager, employee):
         """POST /api/users/team/time-entry/ - Manager creates/fixes time entry"""
         from django.utils import timezone
+
         from users.models import TimeEntry
 
         employee.manager = manager
