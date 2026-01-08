@@ -64,7 +64,7 @@ class TestTeam:
             role="admin",
         )
         team = Team.objects.create(name="Admin Team", created_by=admin)
-        
+
         api_client.force_authenticate(user=admin)
         url = reverse("admin-assign-team")
         response = api_client.put(url, {"user_id": employee.id, "team_id": team.id})
