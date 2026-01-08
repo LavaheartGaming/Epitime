@@ -70,3 +70,47 @@ class TestTasks:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
         assert response.data[0]["title"] == "Task 1"
+
+    def test_get_task_detail(self, api_client, user):
+        """GET /api/users/tasks/<pk>/ - User can view their task"""
+        api_client.force_authenticate(user=user)
+        task = Task.objects.create(title="My Task", created_by=user, assigned_to=user, priority="high")
+
+        url = reverse("task-detail", kwargs={"pk": task.pk})
+        response = api_client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["title"] == "My Task"
+        assert response.data["priority"] == "high"
+
+    def test_update_task(self, api_client, user):
+        """PUT /api/users/tasks/<pk>/ - User can update their task"""
+        api_client.force_authenticate(user=user)
+        task = Task.objects.create(title="Old Title", created_by=user, assigned_to=user, priority="low")
+
+        url = reverse("task-detail", kwargs={"pk": task.pk})
+        response = api_client.put(url, {"title": "New Title", "priority": "high", "progress": 50})
+        assert response.status_code == status.HTTP_200_OK
+        task.refresh_from_db()
+        assert task.title == "New Title"
+        assert task.priority == "high"
+        assert task.progress == 50
+
+    def test_delete_task(self, api_client, user):
+        """DELETE /api/users/tasks/<pk>/ - User can delete their task"""
+        api_client.force_authenticate(user=user)
+        task = Task.objects.create(title="To Delete", created_by=user, assigned_to=user)
+
+        url = reverse("task-detail", kwargs={"pk": task.pk})
+        response = api_client.delete(url)
+        assert response.status_code == status.HTTP_200_OK
+        assert Task.objects.count() == 0
+
+    def test_task_access_denied(self, api_client, user, manager):
+        """GET /api/users/tasks/<pk>/ - User cannot access another user's task"""
+        api_client.force_authenticate(user=user)
+        # Create a task belonging to manager
+        other_task = Task.objects.create(title="Manager Task", created_by=manager, assigned_to=manager)
+
+        url = reverse("task-detail", kwargs={"pk": other_task.pk})
+        response = api_client.get(url)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
