@@ -6,7 +6,6 @@ from .views import (
     ClockInView,
     ClockOutView,
     DeleteAccountView,
-    Enable2FAView,
     LoginView,
     MyTeamView,
     MyTodayStatusView,
@@ -20,7 +19,6 @@ from .views import (
     TimeEntryListView,
     UpdateUserView,
     UserListCreateView,
-    Verify2FAView,
 )
 
 urlpatterns = [
@@ -30,8 +28,6 @@ urlpatterns = [
     path("update/", UpdateUserView.as_view(), name="update"),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),
     path("delete/", DeleteAccountView.as_view(), name="delete-account"),
-    path("enable-2fa/", Enable2FAView.as_view(), name="enable-2fa"),
-    path("verify-2fa/", Verify2FAView.as_view(), name="verify-2fa"),
     path("clock-in/", ClockInView.as_view(), name="clock-in"),
     path("clock-out/", ClockOutView.as_view(), name="clock-out"),
     path("time-entries/", TimeEntryListView.as_view(), name="time-entries"),

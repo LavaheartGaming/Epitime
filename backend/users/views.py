@@ -3,8 +3,6 @@ import time
 from django.db import models
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django_otp.oath import TOTP
-from django_otp.util import random_hex
 from rest_framework import generics, permissions, status
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
@@ -121,44 +119,6 @@ class DeleteAccountView(APIView):
         user = request.user
         user.delete()
         return Response({"message": "✅ Account deleted successfully."}, status=200)
-
-
-# === Activation de la double authentification (2FA) ===
-class Enable2FAView(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request):
-        user = request.user
-        if not hasattr(user, "otp_secret") or not user.otp_secret:
-            user.otp_secret = random_hex(20)
-            user.save()
-
-        otp = TOTP(user.otp_secret)
-        otp.time = int(time.time()) // 30
-        code = otp.token()
-
-        return Response({"message": "2FA setup initiated", "otp_secret": user.otp_secret, "example_code": code})
-
-
-# === Vérification du code 2FA ===
-class Verify2FAView(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request):
-        user = request.user
-        code = request.data.get("code")
-        if not code:
-            return Response({"error": "Code required"}, status=400)
-
-        otp = TOTP(user.otp_secret)
-        otp.time = int(time.time()) // 30
-        if otp.token() == code:
-            user.two_factor_enabled = True
-            user.save()
-            return Response({"message": "✅ 2FA activated successfully"})
-        return Response({"error": "❌ Invalid 2FA code"}, status=400)
 
 
 class ClockInView(APIView):
