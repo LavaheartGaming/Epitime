@@ -1,0 +1,21 @@
+{
+    "defaults": {
+        "standard": "WCAG2AA",
+        "runners": [
+            "axe",
+            "htmlcs"
+        ],
+        "chromeLaunchConfig": {
+            "args": [
+                "--no-sandbox",
+                "--disable-setuid-sandbox"
+            ]
+        },
+        "timeout": 30000
+    },
+    "urls": [
+        "http://localhost:3000",
+        "http://localhost:3000/login",
+        "http://localhost:3000/dashboard"
+    ]
+}

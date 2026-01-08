@@ -1,0 +1,117 @@
+/* Button accessible styles */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: inherit;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    min-height: 44px;
+    /* WCAG 2.1 - Target Size */
+    min-width: 44px;
+    padding: 0 16px;
+}
+
+/* Sizes */
+.btn-small {
+    font-size: 14px;
+    padding: 0 12px;
+    min-height: 36px;
+}
+
+.btn-medium {
+    font-size: 16px;
+    padding: 0 16px;
+    min-height: 44px;
+}
+
+.btn-large {
+    font-size: 18px;
+    padding: 0 24px;
+    min-height: 52px;
+}
+
+/* Variants */
+.btn-primary {
+    background-color: var(--primary, #0066CC);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--primary-dark, #004C99);
+}
+
+.btn-secondary {
+    background-color: var(--bg-secondary, #F5F5F5);
+    color: var(--text-primary, #1A1A1A);
+    border: 2px solid var(--border-color, #CCCCCC);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--bg-tertiary, #E5E5E5);
+}
+
+.btn-danger {
+    background-color: var(--error, #C41E3A);
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background-color: #A01830;
+}
+
+.btn-success {
+    background-color: var(--success, #2D7A2D);
+    color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+    background-color: #236023;
+}
+
+/* Disabled state */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Loading state */
+.btn-spinner {
+    animation: spin 1s linear infinite;
+}
+
+.btn-content-loading {
+    opacity: 0.7;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .btn {
+        transition: none;
+    }
+
+    .btn-spinner {
+        animation: none;
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .btn {
+        border: 2px solid currentColor;
+    }
+}

@@ -1,0 +1,61 @@
+/* Système de couleurs accessible - WCAG 2.1 AA */
+:root {
+  /* Couleurs primaires avec contraste ≥ 4.5:1 */
+  --primary: #0066CC;
+  --primary-dark: #004C99;
+  --primary-light: #3385D6;
+  
+  /* Couleurs d'état */
+  --success: #2D7A2D;      /* Vert accessible */
+  --error: #C41E3A;        /* Rouge accessible */
+  --warning: #D97706;      /* Orange accessible */
+  --info: #0369A1;         /* Bleu info accessible */
+  
+  /* Texte */
+  --text-primary: #1A1A1A;    /* Contraste 16:1 sur blanc */
+  --text-secondary: #4A4A4A;  /* Contraste 9:1 sur blanc */
+  --text-disabled: #767676;   /* Contraste 4.5:1 sur blanc */
+  
+  /* Backgrounds */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F5F5F5;
+  --bg-tertiary: #E5E5E5;
+  
+  /* Bordures */
+  --border-color: #CCCCCC;
+  --border-focus: var(--primary);
+}
+
+/* Mode contraste élevé */
+@media (prefers-contrast: high) {
+  :root {
+    --primary: #0052A3;
+    --text-primary: #000000;
+    --border-color: #000000;
+  }
+}
+
+/* Mode sombre */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #4D9FFF;
+    --text-primary: #FFFFFF;
+    --text-secondary: #CCCCCC;
+    --bg-primary: #1A1A1A;
+    --bg-secondary: #2D2D2D;
+    --bg-tertiary: #3D3D3D;
+    --border-color: #4A4A4A;
+  }
+}
+
+/* Réduction des animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
