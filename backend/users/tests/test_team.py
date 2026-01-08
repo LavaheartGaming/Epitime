@@ -4,6 +4,8 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from users.models import Team
+
 User = get_user_model()
 
 
@@ -51,18 +53,32 @@ class TestTeam:
         assert response.status_code == status.HTTP_200_OK
 
     def test_assign_manager_self(self, api_client, manager, employee):
-        # Manager assigning employee to themselves
-        api_client.force_authenticate(user=manager)
-        url = reverse("admin-assign-manager")
-        response = api_client.put(url, {"user_id": employee.id, "manager_id": manager.id})
+        # Admin assigning employee to a team
+        # Create admin user
+        admin = User.objects.create_user(
+            email="admin@example.com",
+            password="password",
+            first_name="Admin",
+            last_name="User",
+            phone_number="+1234567899",
+            role="admin",
+        )
+        team = Team.objects.create(name="Admin Team", created_by=admin)
+        
+        api_client.force_authenticate(user=admin)
+        url = reverse("admin-assign-team")
+        response = api_client.put(url, {"user_id": employee.id, "team_id": team.id})
         assert response.status_code == status.HTTP_200_OK
         employee.refresh_from_db()
-        assert employee.manager == manager
+        assert employee.team == team
 
     def test_set_status(self, api_client, manager, employee):
-        # Assign employee to manager first
-        employee.manager = manager
+        # Assign employee to manager's team first
+        team = Team.objects.create(name="Status Team", created_by=manager)
+        employee.team = team
         employee.save()
+        manager.team = team
+        manager.save()
 
         api_client.force_authenticate(user=manager)
         url = reverse("team-status-set")
@@ -76,8 +92,12 @@ class TestTeam:
 
         from users.models import TimeEntry
 
-        employee.manager = manager
+        # Assign employee to manager's team
+        team = Team.objects.create(name="Time Entry Team", created_by=manager)
+        employee.team = team
         employee.save()
+        manager.team = team
+        manager.save()
 
         # Create time entries for employee
         TimeEntry.objects.create(user=employee, clock_in=timezone.now())
@@ -94,8 +114,12 @@ class TestTeam:
 
         from users.models import TimeEntry
 
-        employee.manager = manager
+        # Assign employee to manager's team
+        team = Team.objects.create(name="Fix Entry Team", created_by=manager)
+        employee.team = team
         employee.save()
+        manager.team = team
+        manager.save()
 
         api_client.force_authenticate(user=manager)
         url = reverse("team-time-entry-upsert")

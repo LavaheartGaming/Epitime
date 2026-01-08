@@ -4,7 +4,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from users.models import Task
+from users.models import Task, Team
 
 User = get_user_model()
 
@@ -49,9 +49,12 @@ class TestTasks:
         assert Task.objects.get().assigned_to == user
 
     def test_manager_assign_task(self, api_client, manager, user):
-        # Assign user to manager
-        user.manager = manager
+        # Create a team and assign users to it
+        team = Team.objects.create(name="Task Team", created_by=manager)
+        user.team = team
         user.save()
+        manager.team = team
+        manager.save()
 
         api_client.force_authenticate(user=manager)
         url = reverse("task-list-create")
