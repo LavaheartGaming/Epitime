@@ -39,12 +39,7 @@ class Team(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(
-        "users.User",
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name="created_teams"
-    )
+    created_by = models.ForeignKey("users.User", on_delete=models.SET_NULL, null=True, related_name="created_teams")
 
     def __str__(self):
         return self.name
