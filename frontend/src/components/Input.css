@@ -23,6 +23,7 @@
 }
 
 .input {
+    display: block;
     font-family: inherit;
     font-size: 16px;
     padding: 12px;
@@ -31,6 +32,8 @@
     background-color: var(--bg-primary, #FFFFFF);
     color: var(--text-primary, #1A1A1A);
     min-height: 44px;
+    width: 100%;
+    position: relative;
     /* WCAG 2.1 - Target Size */
     transition: border-color 0.2s;
 }
@@ -60,13 +63,51 @@
     box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
 }
 
+/* Error message */
 .error-message {
-    font-size: 14px;
-    color: var(--error, #C41E3A);
-    margin: 0;
+    color: var(--error-color, #ef4444);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 0.25rem;
+}
+
+/* Icon support */
+.input-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary, #94a3b8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.input-icon-start {
+    left: 0.75rem;
+}
+
+.input-icon-end {
+    right: 0.75rem;
+    pointer-events: auto;
+}
+
+.input.input-has-start-icon {
+    padding-left: 2.5rem;
+}
+
+.input.input-has-end-icon {
+    padding-right: 2.5rem;
 }
 
 .error-message::before {

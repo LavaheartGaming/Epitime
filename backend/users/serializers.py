@@ -5,8 +5,7 @@ from .models import Task, TeamStatus, TimeEntry, User
 
 
 class UserSerializer(serializers.ModelSerializer):
-    manager_id = serializers.IntegerField(required=False, allow_null=True)
-    manager_name = serializers.SerializerMethodField()
+    team_id = serializers.IntegerField(required=False, allow_null=True)
 
     class Meta:
         model = User
@@ -20,8 +19,7 @@ class UserSerializer(serializers.ModelSerializer):
             "two_factor_enabled",
             "password",
             "full_name",
-            "manager_id",
-            "manager_name",
+            "team_id",
         ]
         extra_kwargs = {
             "password": {"write_only": True},
@@ -29,9 +27,6 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name": {"required": True},
             "last_name": {"required": True},
         }
-
-    def get_manager_name(self, obj):
-        return obj.manager.full_name if obj.manager else None
 
     def create(self, validated_data):
         password = validated_data.pop("password", None)
@@ -51,8 +46,8 @@ class UserSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             if attr == "password":
                 instance.set_password(value)
-            elif attr == "manager_id":
-                instance.manager_id = value
+            elif attr == "team_id":
+                instance.team_id = value
             else:
                 setattr(instance, attr, value)
         instance.save()

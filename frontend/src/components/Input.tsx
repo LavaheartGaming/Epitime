@@ -4,7 +4,7 @@ import './Input.css';
 export interface InputProps {
     id: string;
     label: string;
-    type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url';
+    type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'date' | 'time' | 'datetime-local' | 'search';
     value: string;
     onChange: (value: string) => void;
     placeholder?: string;
@@ -14,6 +14,8 @@ export interface InputProps {
     helpText?: string;
     autoComplete?: string;
     className?: string;
+    startIcon?: React.ReactNode;
+    endIcon?: React.ReactNode;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -29,6 +31,8 @@ export const Input: React.FC<InputProps> = ({
     helpText,
     autoComplete,
     className = '',
+    startIcon,
+    endIcon,
 }) => {
     const errorId = `${id}-error`;
     const helpId = `${id}-help`;
@@ -51,23 +55,35 @@ export const Input: React.FC<InputProps> = ({
                 </p>
             )}
 
-            <input
-                id={id}
-                type={type}
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                placeholder={placeholder}
-                required={required}
-                disabled={disabled}
-                autoComplete={autoComplete}
-                aria-required={required}
-                aria-invalid={hasError}
-                aria-describedby={
-                    `${helpText ? helpId : ''} ${hasError ? errorId : ''}`.trim() || undefined
-                }
-                className={`input ${hasError ? 'input-error' : ''}`}
-                style={{ minHeight: '44px' }}
-            />
+            <div className="input-wrapper">
+                {startIcon && (
+                    <div className="input-icon input-icon-start" aria-hidden="true">
+                        {startIcon}
+                    </div>
+                )}
+                <input
+                    id={id}
+                    type={type}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    placeholder={placeholder}
+                    required={required}
+                    disabled={disabled}
+                    autoComplete={autoComplete}
+                    aria-required={required}
+                    aria-invalid={hasError}
+                    aria-describedby={
+                        `${helpText ? helpId : ''} ${hasError ? errorId : ''}`.trim() || undefined
+                    }
+                    className={`input ${hasError ? 'input-error' : ''} ${startIcon ? 'input-has-start-icon' : ''} ${endIcon ? 'input-has-end-icon' : ''}`}
+                    style={{ minHeight: '44px' }}
+                />
+                {endIcon && (
+                    <div className="input-icon input-icon-end" aria-hidden="true">
+                        {endIcon}
+                    </div>
+                )}
+            </div>
 
             {hasError && (
                 <p id={errorId} className="error-message" role="alert" aria-live="polite">

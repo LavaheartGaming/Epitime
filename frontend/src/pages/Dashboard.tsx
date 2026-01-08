@@ -13,6 +13,9 @@ import {
 // Framer Motion est une librairie React standard
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, X, Trash2 } from "lucide-react";
+import { Input } from "../components/Input";
+import { Button } from "../components/Button";
+import { Modal } from "../components/Modal";
 
 type TaskType = {
   id: number;
@@ -242,6 +245,11 @@ export default function EpitimeDashboard() {
     return list.concat(team); // 👈 other members
   }, [teamManager, team]);
 
+  // Drawer form states - mocked for UI
+  const [meetingDate, setMeetingDate] = useState("");
+  const [meetingTime, setMeetingTime] = useState("");
+  const [quickTask, setQuickTask] = useState("");
+
   return (
     <div className="min-h-screen bg-[#123A8A] text-white flex flex-col items-center py-10">
       <h1 className="text-3xl font-extrabold mb-8">Epitime Dashboard</h1>
@@ -250,10 +258,11 @@ export default function EpitimeDashboard() {
       <div className="bg-[#0F2658] rounded-2xl shadow-lg p-6 w-[90%] max-w-6xl mb-10">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold lowercase">my work summary</h2>
-          <div className="flex gap-3">
+          <div className="flex gap-3" role="group" aria-label="Chart view mode">
             <button
               onClick={() => setMode("daily")}
-              className={`px-4 py-1 rounded-full text-sm ${mode === "daily"
+              aria-pressed={mode === "daily"}
+              className={`px-4 py-1 rounded-full text-sm transition-colors ${mode === "daily"
                 ? "bg-cyan-400 text-slate-900"
                 : "bg-slate-700 hover:bg-slate-600"
                 }`}
@@ -262,7 +271,8 @@ export default function EpitimeDashboard() {
             </button>
             <button
               onClick={() => setMode("weekly")}
-              className={`px-4 py-1 rounded-full text-sm ${mode === "weekly"
+              aria-pressed={mode === "weekly"}
+              className={`px-4 py-1 rounded-full text-sm transition-colors ${mode === "weekly"
                 ? "bg-cyan-400 text-slate-900"
                 : "bg-slate-700 hover:bg-slate-600"
                 }`}
@@ -309,12 +319,13 @@ export default function EpitimeDashboard() {
 
         {/* Bouton affichage du tableau */}
         <div className="text-center mt-8">
-          <button
+          <Button
             onClick={() => setShowTable(!showTable)}
-            className="px-5 py-2 rounded-full bg-cyan-400 text-slate-900 font-semibold hover:bg-cyan-300"
+            variant="secondary"
+            className="rounded-full bg-cyan-400 text-slate-900 hover:bg-cyan-300 border-none"
           >
             {showTable ? "Hide detailed hours" : "+ View detailed hours table"}
-          </button>
+          </Button>
         </div>
 
         {/* Tableau des heures détaillé */}
@@ -386,7 +397,7 @@ export default function EpitimeDashboard() {
                   setSelectedMate(tm);
                   setDrawerOpen(true);
                 }}
-                className="flex justify-between items-center bg-slate-800/60 px-4 py-3 rounded-full hover:bg-slate-700 border border-slate-600 hover:border-cyan-400"
+                className="flex justify-between items-center bg-slate-800/60 px-4 py-3 rounded-full hover:bg-slate-700 border border-slate-600 hover:border-cyan-400 text-white w-full"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-slate-500" />
@@ -426,13 +437,14 @@ export default function EpitimeDashboard() {
       <div className="bg-[#0F2658] rounded-2xl shadow-lg p-6 w-[90%] max-w-6xl">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold lowercase">project tasks overview</h2>
-          <button
+          <Button
             onClick={() => setShowTaskModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-400 text-slate-900 font-semibold hover:bg-cyan-300 transition"
+            className="flex items-center gap-2 rounded-full bg-cyan-400 text-slate-900 border-none hover:bg-cyan-300"
+            variant="primary"
           >
-            <Plus size={18} />
+            <Plus size={18} aria-hidden="true" />
             Create Task
-          </button>
+          </Button>
         </div>
 
         {tasks.length === 0 ? (
@@ -463,6 +475,7 @@ export default function EpitimeDashboard() {
                       onClick={() => handleDeleteTask(t.id)}
                       className="p-1 rounded-lg hover:bg-red-500/20 text-red-400 hover:text-red-300 transition"
                       title="Delete task"
+                      aria-label={`Delete task: ${t.title}`}
                     >
                       <Trash2 size={16} />
                     </button>
@@ -506,6 +519,7 @@ export default function EpitimeDashboard() {
               <button
                 onClick={() => setDrawerOpen(false)}
                 className="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600"
+                aria-label="Close details"
               >
                 ✕
               </button>
@@ -513,26 +527,49 @@ export default function EpitimeDashboard() {
 
             <div className="p-6 space-y-8">
               <div>
-                <div className="text-sm mb-3 text-slate-300">Book a meeting</div>
+                <h3 className="text-sm mb-3 text-slate-300 font-medium">Book a meeting</h3>
                 <div className="space-y-3">
-                  <input type="date" className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 w-full" />
-                  <input type="time" className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 w-full" />
-                  <button className="rounded-xl bg-cyan-400 text-slate-900 font-semibold py-2 w-full hover:bg-cyan-300">
+                  <Input
+                    id="meeting-date"
+                    label="Date"
+                    type="date"
+                    value={meetingDate}
+                    onChange={setMeetingDate}
+                  />
+                  <Input
+                    id="meeting-time"
+                    label="Time"
+                    type="time"
+                    value={meetingTime}
+                    onChange={setMeetingTime}
+                  />
+                  <Button
+                    onClick={() => { }}
+                    className="w-full bg-cyan-400 text-slate-900 border-none hover:bg-cyan-300"
+                  >
                     Confirm meeting
-                  </button>
+                  </Button>
                 </div>
               </div>
 
               <div>
-                <div className="text-sm mb-3 text-slate-300">Add quick task</div>
-                <div className="flex gap-2">
-                  <input
-                    placeholder="Task title..."
-                    className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2"
-                  />
-                  <button className="px-4 rounded-xl bg-emerald-400 text-slate-900 font-semibold hover:bg-emerald-300">
+                <h3 className="text-sm mb-3 text-slate-300 font-medium">Add quick task</h3>
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Input
+                      id="quick-task"
+                      label="Title"
+                      value={quickTask}
+                      onChange={setQuickTask}
+                      placeholder="Task title..."
+                    />
+                  </div>
+                  <Button
+                    className="rounded-xl bg-emerald-400 text-slate-900 border-none hover:bg-emerald-300 mb-[2px]"
+                    onClick={() => { }}
+                  >
                     Add
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -558,12 +595,12 @@ export default function EpitimeDashboard() {
               {/* --- START A CHAT BUTTON --- */}
               <div className="p-6 border-t border-white/10 mt-6">
                 <div className="text-sm mb-3 text-slate-300">Start a chat</div>
-                <button
-                  onClick={() => navigate("/chat")} // 🟢 Changé de router.push() à navigate()
-                  className="w-full bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-semibold py-2 rounded-xl transition-all"
+                <Button
+                  onClick={() => navigate("/chat")}
+                  className="w-full bg-cyan-400 hover:bg-cyan-300 text-slate-900 border-none"
                 >
                   Go to Chat
-                </button>
+                </Button>
               </div>
             </div>
           </motion.aside>
@@ -571,100 +608,63 @@ export default function EpitimeDashboard() {
       </AnimatePresence>
 
       {/* Task Creation Modal */}
-      <AnimatePresence>
-        {showTaskModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
-            onClick={() => setShowTaskModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-slate-900 rounded-2xl p-6 w-[90%] max-w-md shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
+      <Modal
+        isOpen={showTaskModal}
+        onClose={() => setShowTaskModal(false)}
+        title="Create New Task"
+      >
+        <div className="space-y-4">
+          <Input
+            id="task-title"
+            label="Title *"
+            value={newTask.title}
+            onChange={(val) => setNewTask({ ...newTask, title: val })}
+            placeholder="Enter task title..."
+          />
+
+          <div>
+            <label htmlFor="task-priority" className="block text-sm text-slate-300 mb-1">
+              Priority
+            </label>
+            <select
+              id="task-priority"
+              value={newTask.priority}
+              onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as "low" | "medium" | "high" })}
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-cyan-400 focus:outline-none"
             >
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold">Create New Task</h3>
-                <button
-                  onClick={() => setShowTaskModal(false)}
-                  className="p-1 rounded-lg hover:bg-slate-800"
-                >
-                  <X size={20} />
-                </button>
-              </div>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
 
-              <div className="space-y-4">
-                {/* Title */}
-                <div>
-                  <label htmlFor="task-title" className="block text-sm text-slate-300 mb-1">Title *</label>
-                  <input
-                    id="task-title"
-                    type="text"
-                    value={newTask.title}
-                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                    placeholder="Enter task title..."
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
-                  />
-                </div>
+          <Input
+            id="task-duration"
+            label="Estimated Duration (hours)"
+            type="number"
+            value={String(newTask.estimated_duration)}
+            onChange={(val) => setNewTask({ ...newTask, estimated_duration: parseFloat(val) || 1 })}
+          />
+          {/* Note: Input prop 'type="number"' works but component expects string value, handled above */}
 
-                {/* Priority */}
-                <div>
-                  <label htmlFor="task-priority" className="block text-sm text-slate-300 mb-1">Priority</label>
-                  <select
-                    id="task-priority"
-                    value={newTask.priority}
-                    onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as "low" | "medium" | "high" })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-cyan-400 focus:outline-none"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
+          <Input
+            id="task-deadline"
+            label="Deadline (Date & Time)"
+            type="datetime-local"
+            value={newTask.due_date}
+            onChange={(val) => setNewTask({ ...newTask, due_date: val })}
+          />
 
-                {/* Duration */}
-                <div>
-                  <label htmlFor="task-duration" className="block text-sm text-slate-300 mb-1">Estimated Duration (hours)</label>
-                  <input
-                    id="task-duration"
-                    type="number"
-                    min="0.5"
-                    step="0.5"
-                    value={newTask.estimated_duration}
-                    onChange={(e) => setNewTask({ ...newTask, estimated_duration: parseFloat(e.target.value) || 1 })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-cyan-400 focus:outline-none"
-                  />
-                </div>
-
-                {/* Due Date & Time */}
-                <div>
-                  <label htmlFor="task-deadline" className="block text-sm text-slate-300 mb-1">Deadline (Date & Time)</label>
-                  <input
-                    id="task-deadline"
-                    type="datetime-local"
-                    value={newTask.due_date}
-                    onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-cyan-400 focus:outline-none"
-                  />
-                </div>
-
-                {/* Submit Button */}
-                <button
-                  onClick={handleCreateTask}
-                  disabled={taskLoading || !newTask.title.trim()}
-                  className="w-full mt-4 py-3 rounded-xl bg-cyan-400 text-slate-900 font-semibold hover:bg-cyan-300 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                >
-                  {taskLoading ? "Creating..." : "Create Task"}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          <Button
+            onClick={handleCreateTask}
+            disabled={taskLoading || !newTask.title.trim()}
+            loading={taskLoading}
+            className="w-full mt-4 bg-cyan-400 text-slate-900 hover:bg-cyan-300 border-none"
+          >
+            Create Task
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

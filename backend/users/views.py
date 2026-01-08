@@ -1,7 +1,7 @@
 from django.db import models
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, serializers, status
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,19 +10,17 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import Task, Team, TeamStatus, TimeEntry, User
 from .serializers import TaskSerializer, TeamStatusSerializer, TimeEntrySerializer, UserSerializer
-from rest_framework import serializers
 
 class TeamSerializer(serializers.ModelSerializer):
     members_count = serializers.IntegerField(source='members.count', read_only=True)
     managers = serializers.SerializerMethodField()
-    
     class Meta:
         model = Team
         fields = ['id', 'name', 'description', 'created_at', 'members_count', 'managers']
 
     def get_managers(self, obj):
         return [
-            {"id": m.id, "full_name": m.full_name, "email": m.email} 
+            {"id": m.id, "full_name": m.full_name, "email": m.email}
             for m in obj.members.filter(role__in=['manager', 'admin'])
         ]
 
@@ -221,7 +219,6 @@ class TeamMembersView(APIView):
         # For Admin: list all users? Or maybe list by team?
         # The frontend expects a flat list for "Manage Team" view, but now we have explicit teams.
         # Let's adapt: if Admin, return ALL users. If Manager, return ONLY team members.
-        
         if request.user.role == "admin":
              users_qs = User.objects.all().select_related('team').order_by("last_name", "first_name")
         elif request.user.role == "manager":
@@ -380,7 +377,6 @@ class TeamListCreateView(generics.ListCreateAPIView):
         if request.user.role != 'admin':
             return Response({"error": "Only admins can create teams"}, status=403)
         return super().create(request, *args, **kwargs)
-    
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
 
@@ -404,18 +400,18 @@ class AdminAssignTeamView(APIView):
 
         if not user_id:
              return Response({"error": "user_id is required"}, status=400)
-        
+
         target = get_object_or_404(User, id=user_id)
-        
+
         if team_id is None:
             target.team = None
             target.save()
             return Response({"message": "User removed from team."}, status=200)
-        
+
         team = get_object_or_404(Team, id=team_id)
         target.team = team
         target.save()
-        
+
         return Response({"message": f"User assigned to team {team.name}"}, status=200)
 
 
@@ -474,7 +470,7 @@ class MyTeamView(APIView):
             manager_info = {
                 "id": team.id,
                 "full_name": team.name, # Using team name as "manager name" or refactor frontend
-                "email": "", 
+                "email": "",
                 "role": "Team",
             }
 

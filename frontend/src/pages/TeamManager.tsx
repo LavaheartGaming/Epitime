@@ -7,6 +7,7 @@ import {
   Trash2, X, Search, ChevronRight, UserPlus,
   Lock, BarChart, Clipboard
 } from "lucide-react";
+import { Input } from "../components/Input";
 
 type TeamMember = {
   id: number;
@@ -437,18 +438,19 @@ export default function TeamManagerPage() {
               </div>
 
               <div className="space-y-4">
+                <Input
+                  id="team-name"
+                  label="Team Name"
+                  value={newTeamName}
+                  onChange={setNewTeamName}
+                  placeholder="e.g. Sales Alpha"
+                  className="w-full"
+                />
+
                 <div>
-                  <label htmlFor="team-name" className="block text-sm text-slate-400 mb-1">Team Name</label>
-                  <input
-                    id="team-name"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 focus:border-cyan-500 outline-none transition"
-                    placeholder="e.g. Sales Alpha"
-                    value={newTeamName}
-                    onChange={e => setNewTeamName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="team-desc" className="block text-sm text-slate-400 mb-1">Description</label>
+                  <label htmlFor="team-desc" className="block text-sm text-slate-400 mb-1">
+                    Description
+                  </label>
                   <textarea
                     id="team-desc"
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 focus:border-cyan-500 outline-none transition min-h-[100px]"
@@ -629,13 +631,15 @@ export default function TeamManagerPage() {
 
                     {/* Search */}
                     <div className="relative mb-4">
-                      <Search className="absolute left-3 top-3 text-slate-500" size={18} />
-                      <input
-                        type="text"
-                        placeholder="Search unassigned users..."
+
+                      <Input
+                        id="user-search"
+                        label="Search Users"
                         value={userSearchTerm}
-                        onChange={(e) => setUserSearchTerm(e.target.value)}
-                        className="w-full bg-slate-900/50 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:border-cyan-500 transition text-sm"
+                        onChange={setUserSearchTerm}
+                        placeholder="Search unassigned users..."
+                        startIcon={<Search className="text-slate-500" size={18} />}
+                        className="w-full"
                       />
                     </div>
 
