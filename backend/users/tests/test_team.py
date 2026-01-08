@@ -6,29 +6,35 @@ from rest_framework.test import APIClient
 
 User = get_user_model()
 
+
 @pytest.fixture
 def api_client():
     return APIClient()
+
 
 @pytest.fixture
 def manager():
     return User.objects.create_user(
         email="manager@example.com",
         password="password",
-        role="manager",
         first_name="Manager",
-        last_name="Boss"
+        last_name="Boss",
+        phone_number="+1234567893",
+        role="manager",
     )
+
 
 @pytest.fixture
 def employee():
     return User.objects.create_user(
         email="employee@example.com",
         password="password",
-        role="user",
         first_name="Emp",
-        last_name="Loyee"
+        last_name="Loyee",
+        phone_number="+1234567894",
+        role="user",
     )
+
 
 @pytest.mark.django_db
 class TestTeam:
@@ -48,10 +54,7 @@ class TestTeam:
         # Manager assigning employee to themselves
         api_client.force_authenticate(user=manager)
         url = reverse("admin-assign-manager")
-        response = api_client.put(url, {
-            "user_id": employee.id,
-            "manager_id": manager.id
-        })
+        response = api_client.put(url, {"user_id": employee.id, "manager_id": manager.id})
         assert response.status_code == status.HTTP_200_OK
         employee.refresh_from_db()
         assert employee.manager == manager
@@ -60,13 +63,9 @@ class TestTeam:
         # Assign employee to manager first
         employee.manager = manager
         employee.save()
-        
+
         api_client.force_authenticate(user=manager)
         url = reverse("team-status-set")
-        response = api_client.post(url, {
-            "user_id": employee.id,
-            "status": "late",
-            "note": "Traffic"
-        })
+        response = api_client.post(url, {"user_id": employee.id, "status": "late", "note": "Traffic"})
         assert response.status_code == status.HTTP_200_OK
         assert response.data["status"] == "late"

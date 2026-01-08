@@ -15,17 +15,15 @@ class CustomUserManager(BaseUserManager):
 
         email = self.normalize_email(email)
         user = self.model(
-            email=email,
-            first_name=first_name,
-            last_name=last_name,
-            phone_number=phone_number,
-            **extra_fields
+            email=email, first_name=first_name, last_name=last_name, phone_number=phone_number, **extra_fields
         )
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, first_name="Admin", last_name="User", phone_number="0000000000", password=None, **extra_fields):
+    def create_superuser(
+        self, email, first_name="Admin", last_name="User", phone_number="0000000000", password=None, **extra_fields
+    ):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
 
@@ -158,4 +156,3 @@ class Task(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.priority}) - {self.assigned_to.full_name}"
-

@@ -43,9 +43,7 @@ class UserSerializer(serializers.ModelSerializer):
         try:
             user.save()
         except IntegrityError:
-            raise serializers.ValidationError({
-                "email": "❌ This email is already registered."
-            }) from None
+            raise serializers.ValidationError({"email": "❌ This email is already registered."}) from None
 
         return user
 
@@ -81,9 +79,19 @@ class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            "id", "title", "description", "priority", "estimated_duration",
-            "progress", "due_date", "created_by", "assigned_to",
-            "assigned_to_name", "created_by_name", "created_at", "updated_at"
+            "id",
+            "title",
+            "description",
+            "priority",
+            "estimated_duration",
+            "progress",
+            "due_date",
+            "created_by",
+            "assigned_to",
+            "assigned_to_name",
+            "created_by_name",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["created_by", "assigned_to", "created_at", "updated_at"]
 
@@ -92,4 +100,3 @@ class TaskSerializer(serializers.ModelSerializer):
 
     def get_created_by_name(self, obj):
         return obj.created_by.full_name if obj.created_by else None
-

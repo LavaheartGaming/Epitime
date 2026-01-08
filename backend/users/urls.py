@@ -44,5 +44,4 @@ urlpatterns = [
     path("me/team/", MyTeamView.as_view(), name="my-team"),
     path("tasks/", TaskListCreateView.as_view(), name="task-list-create"),
     path("tasks/<int:pk>/", TaskDetailView.as_view(), name="task-detail"),
-
 ]

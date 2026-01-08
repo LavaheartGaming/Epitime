@@ -37,6 +37,6 @@ ignore = [
 known-first-party = ["api", "users"]
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "api.settings"
+DJANGO_SETTINGS_MODULE = "api.settings_test"
 python_files = ["test_*.py", "*_test.py"]
 addopts = "-v --tb=short"

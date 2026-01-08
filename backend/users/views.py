@@ -38,8 +38,8 @@ class LoginView(APIView):
     def post(self, request):
         print("=== DEBUG LOGIN ===")
         print(request.data)
-        email = request.data.get('email')
-        password = request.data.get('password')
+        email = request.data.get("email")
+        password = request.data.get("password")
 
         if not email or not password:
             return Response({"error": "Email and password are required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -53,21 +53,24 @@ class LoginView(APIView):
             return Response({"error": "❌ Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST)
 
         refresh = RefreshToken.for_user(user)
-        return Response({
-            "message": "✅ Login successful",
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-            "user": {
-                "id": user.id,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "full_name": user.full_name,
-                "email": user.email,
-                "role": user.role,
-                "phone_number": user.phone_number,
-                "two_factor_enabled": user.two_factor_enabled,
+        return Response(
+            {
+                "message": "✅ Login successful",
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "user": {
+                    "id": user.id,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "full_name": user.full_name,
+                    "email": user.email,
+                    "role": user.role,
+                    "phone_number": user.phone_number,
+                    "two_factor_enabled": user.two_factor_enabled,
+                },
             },
-        }, status=status.HTTP_200_OK)
+            status=status.HTTP_200_OK,
+        )
 
 
 # === Mise à jour du profil ===
@@ -135,11 +138,7 @@ class Enable2FAView(APIView):
         otp.time = int(time.time()) // 30
         code = otp.token()
 
-        return Response({
-            "message": "2FA setup initiated",
-            "otp_secret": user.otp_secret,
-            "example_code": code
-        })
+        return Response({"message": "2FA setup initiated", "otp_secret": user.otp_secret, "example_code": code})
 
 
 # === Vérification du code 2FA ===
@@ -160,6 +159,7 @@ class Verify2FAView(APIView):
             user.save()
             return Response({"message": "✅ 2FA activated successfully"})
         return Response({"error": "❌ Invalid 2FA code"}, status=400)
+
 
 class ClockInView(APIView):
     authentication_classes = [JWTAuthentication]
@@ -216,10 +216,12 @@ class TimeEntryListView(APIView):
         entries = TimeEntry.objects.filter(user=request.user).order_by("-clock_in")[:200]
         return Response(TimeEntrySerializer(entries, many=True).data, status=status.HTTP_200_OK)
 
+
 # ---- Permissions ----
 class IsManagerOrAdmin(BasePermission):
     def has_permission(self, request, view):
         return bool(request.user and request.user.is_authenticated and request.user.role in ["manager", "admin"])
+
 
 class IsAdmin(BasePermission):
     def has_permission(self, request, view):
@@ -262,18 +264,20 @@ class TeamMembersView(APIView):
         for u in users_qs:
             open_entry = open_map.get(u.id)
             status_obj = status_map.get(u.id)
-            data.append({
-                "id": u.id,
-                "full_name": u.full_name,
-                "email": u.email,
-                "role": u.role,
-                "manager_id": u.manager_id,
-                "manager_name": u.manager.full_name if u.manager else None,
-                "is_clocked_in": bool(open_entry),
-                "open_clock_in": open_entry.clock_in.isoformat() if open_entry else None,
-                "today_status": status_obj.status if status_obj else "normal",
-                "today_status_note": status_obj.note if status_obj else "",
-            })
+            data.append(
+                {
+                    "id": u.id,
+                    "full_name": u.full_name,
+                    "email": u.email,
+                    "role": u.role,
+                    "manager_id": u.manager_id,
+                    "manager_name": u.manager.full_name if u.manager else None,
+                    "is_clocked_in": bool(open_entry),
+                    "open_clock_in": open_entry.clock_in.isoformat() if open_entry else None,
+                    "today_status": status_obj.status if status_obj else "normal",
+                    "today_status_note": status_obj.note if status_obj else "",
+                }
+            )
 
         return Response(data, status=status.HTTP_200_OK)
 
@@ -338,9 +342,9 @@ class TeamTimeEntryUpsertView(APIView):
 
     def post(self, request):
         user_id = request.data.get("user_id")
-        clock_in = request.data.get("clock_in")   # ISO datetime
-        clock_out = request.data.get("clock_out") # ISO datetime (optional)
-        entry_id = request.data.get("entry_id")   # optional: if you want to edit an existing entry
+        clock_in = request.data.get("clock_in")  # ISO datetime
+        clock_out = request.data.get("clock_out")  # ISO datetime (optional)
+        entry_id = request.data.get("entry_id")  # optional: if you want to edit an existing entry
 
         if not user_id or not clock_in:
             return Response({"error": "user_id and clock_in are required."}, status=400)
@@ -412,7 +416,10 @@ class AdminAssignManagerView(APIView):
 
         target.manager = manager_user
         target.save()
-        return Response({"message": "✅ Manager assigned.", "user_id": target.id, "manager_id": manager_user.id}, status=200)
+        return Response(
+            {"message": "✅ Manager assigned.", "user_id": target.id, "manager_id": manager_user.id}, status=200
+        )
+
 
 class MyTodayStatusView(APIView):
     permission_classes = [IsAuthenticated]
@@ -421,15 +428,16 @@ class MyTodayStatusView(APIView):
         today = timezone.localdate()
         try:
             status = TeamStatus.objects.get(user=request.user, date=today)
-            return Response({
-                "status": status.status,
-                "note": status.note,
-                "date": str(today),
-            })
+            return Response(
+                {
+                    "status": status.status,
+                    "note": status.note,
+                    "date": str(today),
+                }
+            )
         except TeamStatus.DoesNotExist:
-            return Response({
-                "status": "normal"
-            })
+            return Response({"status": "normal"})
+
 
 class MyTeamView(APIView):
     permission_classes = [IsAuthenticated]
@@ -485,21 +493,20 @@ class MyTeamView(APIView):
             open_entry = open_map.get(u.id)
             status_obj = status_map.get(u.id)
 
-            members.append({
-                "id": u.id,
-                "full_name": u.full_name,
-                "email": u.email,
-                "role": u.role,
-                "is_clocked_in": bool(open_entry),
-                "open_clock_in": open_entry.clock_in.isoformat() if open_entry else None,
-                "today_status": status_obj.status if status_obj else "normal",
-                "today_status_note": status_obj.note if status_obj else "",
-            })
+            members.append(
+                {
+                    "id": u.id,
+                    "full_name": u.full_name,
+                    "email": u.email,
+                    "role": u.role,
+                    "is_clocked_in": bool(open_entry),
+                    "open_clock_in": open_entry.clock_in.isoformat() if open_entry else None,
+                    "today_status": status_obj.status if status_obj else "normal",
+                    "today_status_note": status_obj.note if status_obj else "",
+                }
+            )
 
-        return Response({
-            "manager": manager_info,
-            "members": members
-        })
+        return Response({"manager": manager_info, "members": members})
 
 
 # ---- Task Views for Users ----
@@ -515,17 +522,23 @@ class TaskListCreateView(APIView):
         elif request.user.role == "manager":
             # Managers see tasks of their team + their own tasks
             team_members = User.objects.filter(manager=request.user)
-            tasks = Task.objects.filter(
-                models.Q(assigned_to=request.user) |
-                models.Q(created_by=request.user) |
-                models.Q(assigned_to__in=team_members) |
-                models.Q(created_by__in=team_members)
-            ).distinct().order_by("-created_at")
+            tasks = (
+                Task.objects.filter(
+                    models.Q(assigned_to=request.user)
+                    | models.Q(created_by=request.user)
+                    | models.Q(assigned_to__in=team_members)
+                    | models.Q(created_by__in=team_members)
+                )
+                .distinct()
+                .order_by("-created_at")
+            )
         else:
             # Regular users see only their own tasks
-            tasks = Task.objects.filter(
-                models.Q(assigned_to=request.user) | models.Q(created_by=request.user)
-            ).distinct().order_by("-created_at")
+            tasks = (
+                Task.objects.filter(models.Q(assigned_to=request.user) | models.Q(created_by=request.user))
+                .distinct()
+                .order_by("-created_at")
+            )
 
         return Response(TaskSerializer(tasks, many=True).data, status=status.HTTP_200_OK)
 
@@ -541,11 +554,11 @@ class TaskListCreateView(APIView):
             elif request.user.role == "manager":
                 # Managers can assign to themselves or their team members
                 if assigned_to_id != request.user.id:
-                    team_member_ids = User.objects.filter(manager=request.user).values_list('id', flat=True)
+                    team_member_ids = User.objects.filter(manager=request.user).values_list("id", flat=True)
                     if assigned_to_id not in team_member_ids:
                         return Response(
                             {"error": "You can only assign tasks to your team members."},
-                            status=status.HTTP_403_FORBIDDEN
+                            status=status.HTTP_403_FORBIDDEN,
                         )
             # Admins can assign to anyone (no restriction)
 
@@ -554,8 +567,7 @@ class TaskListCreateView(APIView):
             # Managers cannot assign tasks to other managers/admins
             if request.user.role == "manager" and assigned_user.role in ["manager", "admin"]:
                 return Response(
-                    {"error": "You cannot assign tasks to managers or admins."},
-                    status=status.HTTP_403_FORBIDDEN
+                    {"error": "You cannot assign tasks to managers or admins."}, status=status.HTTP_403_FORBIDDEN
                 )
 
             serializer.save(created_by=request.user, assigned_to=assigned_user)
@@ -581,7 +593,7 @@ class TaskDetailView(APIView):
 
         # Manager can access tasks of their team members
         if user.role == "manager":
-            team_member_ids = User.objects.filter(manager=user).values_list('id', flat=True)
+            team_member_ids = User.objects.filter(manager=user).values_list("id", flat=True)
             if task.assigned_to_id in team_member_ids or task.created_by_id in team_member_ids:
                 return task
 
@@ -610,4 +622,3 @@ class TaskDetailView(APIView):
             return Response({"error": "Not allowed."}, status=status.HTTP_403_FORBIDDEN)
         task.delete()
         return Response({"message": "✅ Task deleted."}, status=status.HTTP_200_OK)
-

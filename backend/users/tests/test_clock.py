@@ -3,13 +3,16 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
+
 from users.models import TimeEntry
 
 User = get_user_model()
 
+
 @pytest.fixture
 def api_client():
     return APIClient()
+
 
 @pytest.fixture
 def user():
@@ -17,8 +20,10 @@ def user():
         email="worker@example.com",
         password="password",
         first_name="Worker",
-        last_name="One"
+        last_name="One",
+        phone_number="+1234567890",
     )
+
 
 @pytest.mark.django_db
 class TestClock:
@@ -41,11 +46,11 @@ class TestClock:
         api_client.force_authenticate(user=user)
         # Clock in first
         api_client.post(reverse("clock-in"))
-        
+
         url = reverse("clock-out")
         response = api_client.post(url)
         assert response.status_code == status.HTTP_200_OK
-        
+
         entry = TimeEntry.objects.get(user=user)
         assert entry.clock_out is not None
         assert entry.total_hours is not None
@@ -61,7 +66,7 @@ class TestClock:
         # Create some entries
         api_client.post(reverse("clock-in"))
         api_client.post(reverse("clock-out"))
-        
+
         url = reverse("time-entries")
         response = api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
