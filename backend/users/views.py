@@ -11,6 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Task, Team, TeamStatus, TimeEntry, User
 from .serializers import TaskSerializer, TeamStatusSerializer, TimeEntrySerializer, UserSerializer
 
+
 class TeamSerializer(serializers.ModelSerializer):
     members_count = serializers.IntegerField(source='members.count', read_only=True)
     managers = serializers.SerializerMethodField()
