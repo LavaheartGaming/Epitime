@@ -555,6 +555,14 @@ export default function TeamManagerPage() {
                               selectMember(team.manager);
                             }
                           }}
+                          onKeyDown={(e) => {
+                            if ((e.key === 'Enter' || e.key === ' ') && team.manager) {
+                              e.preventDefault();
+                              selectMember(team.manager);
+                            }
+                          }}
+                          role="button"
+                          tabIndex={0}
                         >
                           <div className="flex items-center justify-between mb-3">
                             <h3 className="font-bold text-lg">
@@ -1071,8 +1079,9 @@ export default function TeamManagerPage() {
                   <div className="space-y-4">
                     {/* Title */}
                     <div>
-                      <label className="block text-sm text-slate-300 mb-1">Title *</label>
+                      <label htmlFor="tm-task-title" className="block text-sm text-slate-300 mb-1">Title *</label>
                       <input
+                        id="tm-task-title"
                         type="text"
                         value={newTask.title}
                         onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
@@ -1083,8 +1092,9 @@ export default function TeamManagerPage() {
 
                     {/* Priority */}
                     <div>
-                      <label className="block text-sm text-slate-300 mb-1">Priority</label>
+                      <label htmlFor="tm-task-priority" className="block text-sm text-slate-300 mb-1">Priority</label>
                       <select
+                        id="tm-task-priority"
                         value={newTask.priority}
                         onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as "low" | "medium" | "high" })}
                         className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-cyan-400 focus:outline-none"
@@ -1097,8 +1107,9 @@ export default function TeamManagerPage() {
 
                     {/* Duration */}
                     <div>
-                      <label className="block text-sm text-slate-300 mb-1">Estimated Duration (hours)</label>
+                      <label htmlFor="tm-task-duration" className="block text-sm text-slate-300 mb-1">Estimated Duration (hours)</label>
                       <input
+                        id="tm-task-duration"
                         type="number"
                         min="0.5"
                         step="0.5"
@@ -1110,8 +1121,9 @@ export default function TeamManagerPage() {
 
                     {/* Deadline */}
                     <div>
-                      <label className="block text-sm text-slate-300 mb-1">Deadline (Date & Time)</label>
+                      <label htmlFor="tm-task-deadline" className="block text-sm text-slate-300 mb-1">Deadline (Date & Time)</label>
                       <input
+                        id="tm-task-deadline"
                         type="datetime-local"
                         value={newTask.due_date}
                         onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
@@ -1121,8 +1133,9 @@ export default function TeamManagerPage() {
 
                     {/* Assign To */}
                     <div>
-                      <label className="block text-sm text-slate-300 mb-1">Assign To</label>
+                      <label htmlFor="tm-task-assign" className="block text-sm text-slate-300 mb-1">Assign To</label>
                       <select
+                        id="tm-task-assign"
                         value={newTask.assigned_to}
                         onChange={(e) => setNewTask({ ...newTask, assigned_to: Number(e.target.value) })}
                         className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-cyan-400 focus:outline-none"

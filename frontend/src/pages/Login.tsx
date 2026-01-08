@@ -153,10 +153,11 @@ export default function LoginPage() {
           {!isLogin && (
             <div className="flex gap-4">
               <div className="w-1/2">
-                <label className="block text-sm mb-2">First Name</label>
+                <label htmlFor="first_name" className="block text-sm mb-2">First Name</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
                   <input
+                    id="first_name"
                     type="text"
                     name="first_name"
                     value={formData.first_name}
@@ -169,10 +170,11 @@ export default function LoginPage() {
               </div>
 
               <div className="w-1/2">
-                <label className="block text-sm mb-2">Last Name</label>
+                <label htmlFor="last_name" className="block text-sm mb-2">Last Name</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
                   <input
+                    id="last_name"
                     type="text"
                     name="last_name"
                     value={formData.last_name}
@@ -187,10 +189,11 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label className="block text-sm mb-2">Email</label>
+            <label htmlFor="email" className="block text-sm mb-2">Email</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
               <input
+                id="email"
                 type="email"
                 name="email"
                 value={formData.email}
@@ -204,10 +207,11 @@ export default function LoginPage() {
 
           {!isLogin && (
             <div>
-              <label className="block text-sm mb-2">Phone number</label>
+              <label htmlFor="phone_number" className="block text-sm mb-2">Phone number</label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
                 <input
+                  id="phone_number"
                   type="tel"
                   name="phone_number"
                   value={formData.phone_number}
@@ -221,10 +225,11 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label className="block text-sm mb-2">Password</label>
+            <label htmlFor="password" className="block text-sm mb-2">Password</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300" />
               <input
+                id="password"
                 type={showPassword ? "text" : "password"}
                 name="password"
                 value={formData.password}
@@ -245,8 +250,9 @@ export default function LoginPage() {
 
           {!isLogin && (
             <div>
-              <label className="block text-sm mb-2">Confirm Password</label>
+              <label htmlFor="confirmPassword" className="block text-sm mb-2">Confirm Password</label>
               <input
+                id="confirmPassword"
                 type="password"
                 name="confirmPassword"
                 value={formData.confirmPassword}

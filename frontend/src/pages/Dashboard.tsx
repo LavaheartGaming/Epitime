@@ -600,8 +600,9 @@ export default function EpitimeDashboard() {
               <div className="space-y-4">
                 {/* Title */}
                 <div>
-                  <label className="block text-sm text-slate-300 mb-1">Title *</label>
+                  <label htmlFor="task-title" className="block text-sm text-slate-300 mb-1">Title *</label>
                   <input
+                    id="task-title"
                     type="text"
                     value={newTask.title}
                     onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
@@ -612,8 +613,9 @@ export default function EpitimeDashboard() {
 
                 {/* Priority */}
                 <div>
-                  <label className="block text-sm text-slate-300 mb-1">Priority</label>
+                  <label htmlFor="task-priority" className="block text-sm text-slate-300 mb-1">Priority</label>
                   <select
+                    id="task-priority"
                     value={newTask.priority}
                     onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as "low" | "medium" | "high" })}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-cyan-400 focus:outline-none"
@@ -626,8 +628,9 @@ export default function EpitimeDashboard() {
 
                 {/* Duration */}
                 <div>
-                  <label className="block text-sm text-slate-300 mb-1">Estimated Duration (hours)</label>
+                  <label htmlFor="task-duration" className="block text-sm text-slate-300 mb-1">Estimated Duration (hours)</label>
                   <input
+                    id="task-duration"
                     type="number"
                     min="0.5"
                     step="0.5"
@@ -639,8 +642,9 @@ export default function EpitimeDashboard() {
 
                 {/* Due Date & Time */}
                 <div>
-                  <label className="block text-sm text-slate-300 mb-1">Deadline (Date & Time)</label>
+                  <label htmlFor="task-deadline" className="block text-sm text-slate-300 mb-1">Deadline (Date & Time)</label>
                   <input
+                    id="task-deadline"
                     type="datetime-local"
                     value={newTask.due_date}
                     onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
