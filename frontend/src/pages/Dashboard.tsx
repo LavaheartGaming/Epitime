@@ -12,7 +12,7 @@ import {
 } from "recharts";
 // Framer Motion est une librairie React standard
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, X, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { Modal } from "../components/Modal";

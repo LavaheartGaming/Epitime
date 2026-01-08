@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     AdminAssignTeamView,
+    AdminResetPasswordView,
     ChangePasswordView,
     ClockInView,
     ClockOutView,
@@ -12,8 +13,8 @@ from .views import (
     RegisterView,
     TaskDetailView,
     TaskListCreateView,
-    TeamListCreateView,
     TeamDetailView,
+    TeamListCreateView,
     TeamMembersView,
     TeamMemberTimeEntriesView,
     TeamStatusSetView,
@@ -21,7 +22,6 @@ from .views import (
     TimeEntryListView,
     UpdateUserView,
     UserListCreateView,
-    AdminResetPasswordView,
 )
 
 urlpatterns = [
