@@ -171,6 +171,7 @@ class TestTeam:
         assert len(response.data) == 3
 
         from users.models import WorkingHours
+
         assert WorkingHours.objects.filter(user=employee).count() == 3
 
     def test_manager_cannot_set_hours_for_non_team_member(self, api_client, manager, employee):

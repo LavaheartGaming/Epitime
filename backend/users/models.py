@@ -195,6 +195,7 @@ class WorkingHours(models.Model):
 # Chat Models
 class Conversation(models.Model):
     """A conversation/chat room for team members"""
+
     name = models.CharField(max_length=100)
     team = models.ForeignKey(
         Team,
@@ -218,6 +219,7 @@ class Conversation(models.Model):
 
 class Message(models.Model):
     """A message in a conversation"""
+
     conversation = models.ForeignKey(
         Conversation,
         on_delete=models.CASCADE,
@@ -236,4 +238,3 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.sender.full_name}: {self.content[:50]}"
-

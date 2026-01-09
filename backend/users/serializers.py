@@ -114,10 +114,6 @@ class WorkingHoursSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
 
-
-
-
-
 class MessageSerializer(serializers.ModelSerializer):
     sender_name = serializers.SerializerMethodField()
     sender_id = serializers.IntegerField(source="sender.id", read_only=True)
@@ -152,4 +148,3 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     def get_participant_count(self, obj):
         return obj.participants.count()
-

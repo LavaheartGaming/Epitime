@@ -121,17 +121,20 @@ class MeView(APIView):
 
     def get(self, request):
         user = request.user
-        return Response({
-            "id": user.id,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "full_name": user.full_name,
-            "email": user.email,
-            "role": user.role,
-            "phone_number": user.phone_number,
-            "two_factor_enabled": user.two_factor_enabled,
-            "team_id": user.team_id,
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "id": user.id,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "full_name": user.full_name,
+                "email": user.email,
+                "role": user.role,
+                "phone_number": user.phone_number,
+                "two_factor_enabled": user.two_factor_enabled,
+                "team_id": user.team_id,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 # === Changement de mot de passe ===
@@ -201,10 +204,7 @@ class ClockInView(APIView):
                 TeamStatus.objects.update_or_create(
                     user=user,
                     date=local_now.date(),
-                    defaults={
-                        "status": "late",
-                        "note": f"Late arrival (Expected: {wh.start_time.strftime('%H:%M')})"
-                    }
+                    defaults={"status": "late", "note": f"Late arrival (Expected: {wh.start_time.strftime('%H:%M')})"},
                 )
         except WorkingHours.DoesNotExist:
             pass
@@ -375,12 +375,7 @@ class WorkingHoursView(APIView):
                 continue  # Skip invalid entries
 
             try:
-                wh = WorkingHours.objects.create(
-                    user=target,
-                    day_of_week=int(day),
-                    start_time=start,
-                    end_time=end
-                )
+                wh = WorkingHours.objects.create(user=target, day_of_week=int(day), start_time=start, end_time=end)
                 created.append(wh)
             except Exception:
                 continue  # Skip invalid entries
@@ -506,7 +501,7 @@ class TeamDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 # ---- Admin: Assign User to Team ----
-    # ---- Admin/Manager: Assign User to Team ----
+# ---- Admin/Manager: Assign User to Team ----
 class AdminAssignTeamView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated, IsManagerOrAdmin]
@@ -578,12 +573,7 @@ class MyTeamView(APIView):
 
         # Check if user has a team
         if not request.user.team_id:
-            return Response({
-                "team_name": None,
-                "team_id": None,
-                "manager": None,
-                "members": []
-            })
+            return Response({"team_name": None, "team_id": None, "manager": None, "members": []})
 
         team = request.user.team
 
@@ -631,12 +621,7 @@ class MyTeamView(APIView):
         # Build members list
         members = [build_user_info(u) for u in members_qs]
 
-        return Response({
-            "team_name": team.name,
-            "team_id": team.id,
-            "manager": manager_info,
-            "members": members
-        })
+        return Response({"team_name": team.name, "team_id": team.id, "manager": manager_info, "members": members})
 
 
 # ---- Task Views for Users ----
@@ -787,6 +772,8 @@ class AdminResetPasswordView(APIView):
         target_user.save()
 
         return Response({"message": f"✅ Password for {target_user.email} has been reset."}, status=status.HTTP_200_OK)
+
+
 # ---- Reports: KPIs ----
 class TeamReportsView(APIView):
     authentication_classes = [JWTAuthentication]
@@ -837,30 +824,30 @@ class TeamReportsView(APIView):
                     hours_week += delta.total_seconds() / 3600
 
             # Lateness Month
-            lates_month = TeamStatus.objects.filter(
-                user=user,
-                status='late',
-                date__gte=start_of_month
-            ).count()
+            lates_month = TeamStatus.objects.filter(user=user, status="late", date__gte=start_of_month).count()
 
-            report_data.append({
-                "id": user.id,
-                "full_name": user.full_name,
-                "email": user.email,
-                "role": user.role,
-                "hours_today": round(hours_today, 2),
-                "hours_week": round(hours_week, 2),
-                "lates_month": lates_month,
-                "team_name": user.team.name if user.team else "No Team"
-            })
+            report_data.append(
+                {
+                    "id": user.id,
+                    "full_name": user.full_name,
+                    "email": user.email,
+                    "role": user.role,
+                    "hours_today": round(hours_today, 2),
+                    "hours_week": round(hours_week, 2),
+                    "lates_month": lates_month,
+                    "team_name": user.team.name if user.team else "No Team",
+                }
+            )
 
         return Response(report_data, status=status.HTTP_200_OK)
 
 
 # ==== CHAT API ====
 
+
 class ConversationListCreateView(APIView):
     """List user's conversations or create a new one"""
+
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -894,6 +881,7 @@ class ConversationListCreateView(APIView):
 
 class ConversationMessagesView(APIView):
     """Get messages from a conversation or send a new message"""
+
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -930,6 +918,7 @@ class ConversationMessagesView(APIView):
 
 class TeamConversationView(APIView):
     """Get or create team conversation for all team members"""
+
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -958,6 +947,7 @@ class TeamConversationView(APIView):
 
 class StartDirectConversationView(APIView):
     """Start or get a direct conversation with another user"""
+
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -972,12 +962,11 @@ class StartDirectConversationView(APIView):
         if target_user.id == request.user.id:
             return Response({"error": "Cannot chat with yourself"}, status=status.HTTP_400_BAD_REQUEST)
 
-        existing = Conversation.objects.filter(
-            is_direct=True,
-            participants=request.user
-        ).filter(
-            participants=target_user
-        ).first()
+        existing = (
+            Conversation.objects.filter(is_direct=True, participants=request.user)
+            .filter(participants=target_user)
+            .first()
+        )
 
         if existing:
             serializer = ConversationSerializer(existing)
@@ -995,6 +984,7 @@ class StartDirectConversationView(APIView):
 
 class MessageDetailView(APIView):
     """Edit or delete a message"""
+
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -1026,6 +1016,7 @@ class MessageDetailView(APIView):
 
 class ConversationDetailView(APIView):
     """Delete a conversation"""
+
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -1040,4 +1031,3 @@ class ConversationDetailView(APIView):
 
         conversation.delete()
         return Response({"message": "Conversation deleted"}, status=status.HTTP_200_OK)
-
