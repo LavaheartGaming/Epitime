@@ -11,30 +11,53 @@ import TeamManagerPage from "../pages/TeamManager"
 import { useAuth } from "../context/AuthContext";
 import React, { ReactElement } from "react";
 // Route protégée
+// Loading spinner component
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-epitimeBlue flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-4 border-cyan-400 border-t-transparent"></div>
+    </div>
+  );
+}
 
-// ...
 function PrivateRoute({ children }: { children: ReactElement }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) return <LoadingScreen />;
   return user ? children : <Navigate to="/login" replace />;
 }
 
+// Redirect if already logged in
+function PublicOnlyRoute({ children }: { children: ReactElement }) {
+  const { user, loading } = useAuth();
+
+  if (loading) return <LoadingScreen />;
+  return user ? <Navigate to="/dashboard" replace /> : children;
+}
+
 function AppRoutes() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <Router>
-      {/* Navbar visible uniquement si connecté */}
+      {/* Navbar visible only if logged in */}
       {user && <Navbar />}
 
       <Routes>
-        <Route path="/team" element={<TeamManagerPage />} />
-        <Route path="/" element={user ? <Home /> : <Navigate to="/login" />} />
-        <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
+        {/* Public Routes */}
+        <Route path="/" element={<Home />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+
+        {/* Protected Routes */}
+        <Route path="/team" element={<PrivateRoute><TeamManagerPage /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/clock" element={<PrivateRoute><Clock /></PrivateRoute>} />
         <Route path="/chat" element={<PrivateRoute><Chat /></PrivateRoute>} />
         <Route path="/account" element={<PrivateRoute><Account /></PrivateRoute>} />
-        <Route path="/login" element={<Login />} />
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>

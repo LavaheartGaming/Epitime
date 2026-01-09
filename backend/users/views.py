@@ -98,6 +98,24 @@ class UpdateUserView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class MeView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response({
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "full_name": user.full_name,
+            "email": user.email,
+            "role": user.role,
+            "phone_number": user.phone_number,
+            "two_factor_enabled": user.two_factor_enabled,
+        }, status=status.HTTP_200_OK)
+
+
 # === Changement de mot de passe ===
 class ChangePasswordView(APIView):
     authentication_classes = [JWTAuthentication]
@@ -470,6 +488,7 @@ class AdminAssignTeamView(APIView):
 
 
 class MyTodayStatusView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -488,6 +507,7 @@ class MyTodayStatusView(APIView):
 
 
 class MyTeamView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
