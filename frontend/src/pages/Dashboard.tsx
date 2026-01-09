@@ -193,48 +193,91 @@ export default function EpitimeDashboard() {
   const [selectedMate, setSelectedMate] = useState<any>(null);
   const [showTable, setShowTable] = useState(false);
 
-  // Calculate daily/weekly data from time entries
-  const chartData = useMemo(() => {
-    if (!timeEntries.length) {
-      return [
-        { day: "Mon", hours: 0 },
-        { day: "Tue", hours: 0 },
-        { day: "Wed", hours: 0 },
-        { day: "Thu", hours: 0 },
-        { day: "Fri", hours: 0 },
-        { day: "Sat", hours: 0 },
-        { day: "Sun", hours: 0 },
-      ];
-    }
-
-    // Get last 7 days
+  // Calculate daily data (hourly breakdown for today)
+  const dailyChartData = useMemo(() => {
     const now = new Date();
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(now);
-      d.setDate(d.getDate() - (6 - i));
-      return d;
+    const todayStr = now.toISOString().split('T')[0];
+
+    // Create hourly slots from 8h to 18h
+    const hourlySlots = Array.from({ length: 11 }, (_, i) => ({
+      time: `${(8 + i).toString().padStart(2, '0')}:00`,
+      hours: 0,
+      isWorking: false,
+    }));
+
+    // Find today's entries
+    const todayEntries = timeEntries.filter(entry => {
+      const entryDate = new Date(entry.clock_in).toISOString().split('T')[0];
+      return entryDate === todayStr;
     });
 
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    // Mark working hours
+    todayEntries.forEach(entry => {
+      const clockIn = new Date(entry.clock_in);
+      const clockOut = entry.clock_out ? new Date(entry.clock_out) : new Date();
 
-    return last7Days.map(date => {
-      const dateStr = date.toISOString().split('T')[0];
+      hourlySlots.forEach((slot, index) => {
+        const slotHour = 8 + index;
+        const slotStart = new Date(now);
+        slotStart.setHours(slotHour, 0, 0, 0);
+        const slotEnd = new Date(now);
+        slotEnd.setHours(slotHour + 1, 0, 0, 0);
+
+        // Check if this hour overlaps with the work period
+        if (clockIn < slotEnd && clockOut > slotStart) {
+          const overlapStart = Math.max(clockIn.getTime(), slotStart.getTime());
+          const overlapEnd = Math.min(clockOut.getTime(), slotEnd.getTime());
+          const overlapHours = (overlapEnd - overlapStart) / (1000 * 60 * 60);
+          slot.hours = Math.round(overlapHours * 10) / 10;
+          slot.isWorking = slot.hours > 0;
+        }
+      });
+    });
+
+    return hourlySlots;
+  }, [timeEntries]);
+
+  // Calculate weekly data (Mon-Fri only, no weekends)
+  const weeklyChartData = useMemo(() => {
+    const now = new Date();
+    const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+    // Find the Monday of current week
+    const monday = new Date(now);
+    const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1;
+    monday.setDate(now.getDate() - daysFromMonday);
+    monday.setHours(0, 0, 0, 0);
+
+    const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+
+    // Create data for Mon-Fri only
+    return weekDays.map((dayName, index) => {
+      const dayDate = new Date(monday);
+      dayDate.setDate(monday.getDate() + index);
+      const dateStr = dayDate.toISOString().split('T')[0];
+
       const dayEntries = timeEntries.filter(entry => {
         const entryDate = new Date(entry.clock_in).toISOString().split('T')[0];
         return entryDate === dateStr;
       });
 
-      const totalHours = dayEntries.reduce((sum, entry) => sum + (entry.total_hours || 0), 0);
+      const totalHoursForDay = dayEntries.reduce((sum, entry) => sum + (entry.total_hours || 0), 0);
 
       return {
-        day: dayNames[date.getDay()],
-        hours: Math.round(totalHours * 10) / 10,
+        day: dayName,
+        hours: Math.round(totalHoursForDay * 10) / 10,
+        date: dateStr,
       };
     });
   }, [timeEntries]);
 
-  const totalHours = chartData.reduce((acc, cur) => acc + cur.hours, 0);
-  const averageHours = chartData.length > 0 ? (totalHours / chartData.length).toFixed(1) : "0.0";
+  // Select chart data based on mode
+  const chartData = mode === "daily" ? dailyChartData : weeklyChartData;
+
+  // Calculate total and average (weekly only, excluding weekends)
+  const totalHours = weeklyChartData.reduce((acc, cur) => acc + cur.hours, 0);
+  const workDaysWithData = weeklyChartData.filter(d => d.hours > 0).length;
+  const averageHours = workDaysWithData > 0 ? (totalHours / workDaysWithData).toFixed(1) : "0.0";
 
   // Calculate punctuality and late arrivals
 
@@ -285,14 +328,20 @@ export default function EpitimeDashboard() {
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e3a8a" />
-            <XAxis dataKey="day" stroke="#cbd5e1" />
-            <YAxis stroke="#cbd5e1" />
+            <XAxis dataKey={mode === "daily" ? "time" : "day"} stroke="#cbd5e1" />
+            <YAxis
+              stroke="#cbd5e1"
+              domain={mode === "daily" ? [0, 1] : [0, 'auto']}
+              tickFormatter={(value) => mode === "daily" ? `${value}h` : value}
+            />
             <Tooltip
               contentStyle={{
                 backgroundColor: "#1e3a8a",
                 border: "none",
                 color: "white",
               }}
+              formatter={(value: number) => [`${value}h`, mode === "daily" ? "Time worked" : "Hours"]}
+              labelFormatter={(label) => mode === "daily" ? `Slot: ${label}` : label}
             />
             <Line
               type="monotone"
@@ -304,21 +353,19 @@ export default function EpitimeDashboard() {
           </LineChart>
         </ResponsiveContainer>
 
-        {/* Résumé des heures */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center mt-8">
-          <div className="bg-slate-800/60 p-4 rounded-xl">
-            <h3 className="text-lg font-semibold">Total Hours</h3>
-            <p className="text-2xl font-bold text-cyan-400">{totalHours}h</p>
-          </div>
-          <div className="bg-slate-800/60 p-4 rounded-xl">
-            <h3 className="text-lg font-semibold">Average</h3>
-            <p className="text-2xl font-bold text-cyan-400">{averageHours}h</p>
+        {/* Hours summary - centered with button */}
+        <div className="flex flex-col items-center mt-8 gap-6">
+          <div className="flex gap-6">
+            <div className="bg-slate-800/60 p-4 rounded-xl text-center min-w-[140px]">
+              <h3 className="text-lg font-semibold">Total Hours</h3>
+              <p className="text-2xl font-bold text-cyan-400">{totalHours}h</p>
+            </div>
+            <div className="bg-slate-800/60 p-4 rounded-xl text-center min-w-[140px]">
+              <h3 className="text-lg font-semibold">Average</h3>
+              <p className="text-2xl font-bold text-cyan-400">{averageHours}h</p>
+            </div>
           </div>
 
-        </div>
-
-        {/* Bouton affichage du tableau */}
-        <div className="text-center mt-8">
           <Button
             onClick={() => setShowTable(!showTable)}
             variant="secondary"
