@@ -22,6 +22,16 @@ type TeamMember = {
   today_status_note: string;
 };
 
+type ReportEntry = {
+  id: number;
+  full_name: string;
+  role: string;
+  hours_today: number;
+  hours_week: number;
+  lates_month: number;
+  team_name: string;
+};
+
 type TeamEntity = {
   id: number;
   name: string;
@@ -63,11 +73,12 @@ export default function TeamManagerPage() {
   // Data State
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [teams, setTeams] = useState<TeamEntity[]>([]);
+  const [reports, setReports] = useState<ReportEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // UI State
-  const [viewMode, setViewMode] = useState<"grid" | "create_team" | "manage_team">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "create_team" | "manage_team" | "reports">("grid");
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
 
   // Create Team Form
@@ -115,17 +126,32 @@ export default function TeamManagerPage() {
       setMembers(Array.isArray(dataMembers) ? dataMembers : []);
 
       // Load Teams
-      if (isAdmin) {
-        const resTeams = await fetchWithAuth(`${API_URL}/api/users/teams/`);
-        const dataTeams = await resTeams.json();
-        if (resTeams.ok) setTeams(dataTeams);
-      }
+      // Admin sees all, Managers see their own (backend handles filtering)
+      const resTeams = await fetchWithAuth(`${API_URL}/api/users/teams/`);
+      const dataTeams = await resTeams.json();
+      if (resTeams.ok) setTeams(dataTeams);
     } catch (err: any) {
       setMsg({ type: 'error', text: err.message || "Server unreachable" });
     } finally {
       setLoading(false);
     }
   }, [API_URL, isAdmin]);
+
+  const loadReports = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/users/team/reports/`);
+      const data = await res.json();
+      if (res.ok) {
+        setReports(data);
+        setViewMode("reports");
+      }
+    } catch (e) {
+      setMsg({ type: 'error', text: 'Failed to load reports' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const createTeam = async () => {
     if (!newTeamName) return;
@@ -384,6 +410,16 @@ export default function TeamManagerPage() {
               <RefreshCcw size={20} className={loading ? "animate-spin" : ""} />
             </button>
 
+            <button
+              onClick={loadReports}
+              className={`p-3 rounded-xl border border-slate-700 transition flex items-center gap-2 ${viewMode === "reports" ? "bg-cyan-500 text-black border-cyan-500" : "bg-slate-800/50 text-slate-300 hover:text-white"
+                }`}
+              title="View Reports"
+            >
+              <BarChart size={20} />
+              <span className="hidden md:inline font-bold">Reports</span>
+            </button>
+
             {isAdmin && viewMode === "grid" && (
               <motion.button
                 whileHover={{ scale: 1.02 }}
@@ -399,7 +435,6 @@ export default function TeamManagerPage() {
             {viewMode !== "grid" && (
               <button
                 onClick={() => {
-                  setViewMode("grid");
                   setViewMode("grid");
                   setSelectedTeamId(null);
                   setMsg(null);
@@ -483,6 +518,72 @@ export default function TeamManagerPage() {
                 </GlassCard>
               </motion.div>
             ))}
+          </motion.div>
+        )}
+
+        {/* --- REPORTS VIEW --- */}
+        {viewMode === "reports" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div className="bg-slate-900/50 border border-slate-700 p-6 rounded-2xl">
+              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2 text-white">
+                <BarChart className="text-cyan-400" /> Team Performance Reports
+              </h2>
+              <p className="text-slate-400">
+                KPIs and stats for your team members. Hours are calculated based on closed sessions for today and this week.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {reports.length === 0 ? (
+                <div className="text-slate-500 col-span-full text-center py-10">
+                  No report data available.
+                </div>
+              ) : (
+                reports.map((r, idx) => (
+                  <motion.div
+                    key={r.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                  >
+                    <GlassCard className="h-full flex flex-col justify-between">
+                      <div className="mb-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-xl font-bold text-white">{r.full_name}</h3>
+                            <p className="text-sm text-slate-400 capitalize">{r.role}</p>
+                          </div>
+                          <div className="text-xs px-2 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                            {r.team_name}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 mt-4 text-center">
+                        <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                          <div className="text-2xl font-mono font-bold text-cyan-400">{r.hours_today}h</div>
+                          <div className="text-xs text-slate-500 mt-1">Today</div>
+                        </div>
+                        <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                          <div className="text-2xl font-mono font-bold text-purple-400">{r.hours_week}h</div>
+                          <div className="text-xs text-slate-500 mt-1">This Week</div>
+                        </div>
+                        <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                          <div className={`text-2xl font-mono font-bold ${r.lates_month > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                            {r.lates_month}
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1">Late (Month)</div>
+                        </div>
+                      </div>
+                    </GlassCard>
+                  </motion.div>
+                ))
+              )}
+            </div>
           </motion.div>
         )}
 
@@ -647,7 +748,7 @@ export default function TeamManagerPage() {
                           </div>
                         </div>
 
-                        {isAdmin && (
+                        {(isAdmin || (user?.role === 'manager' && currentTeam?.id === user?.team_id)) && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -666,30 +767,32 @@ export default function TeamManagerPage() {
               </div>
 
               {/* Right Col: Add Members */}
-              {isAdmin && (
+              {(isAdmin || (user?.role === 'manager' && currentTeam?.id === user?.team_id)) && (
                 <div className="lg:col-span-1 space-y-6">
-                  {/* Add Managers */}
-                  <GlassCard>
-                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Available Managers</h3>
-                    <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar">
-                      {unassignedManagers.length === 0 ? (
-                        <p className="text-sm text-slate-500">No unassigned managers.</p>
-                      ) : (
-                        unassignedManagers.map(mgr => (
-                          <button
-                            key={mgr.id}
-                            onClick={() => assignToTeam(mgr.id, currentTeam.id)}
-                            className="w-full text-left p-2 rounded-lg hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 transition flex justify-between items-center group"
-                          >
-                            <span className="text-sm font-medium text-slate-300">{mgr.full_name}</span>
-                            <Plus size={14} className="text-slate-500 group-hover:text-purple-400" />
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </GlassCard>
+                  {/* Add Managers - Admin Only */}
+                  {isAdmin && (
+                    <GlassCard>
+                      <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Available Managers</h3>
+                      <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar">
+                        {unassignedManagers.length === 0 ? (
+                          <p className="text-sm text-slate-500">No unassigned managers.</p>
+                        ) : (
+                          unassignedManagers.map(mgr => (
+                            <button
+                              key={mgr.id}
+                              onClick={() => assignToTeam(mgr.id, currentTeam.id)}
+                              className="w-full text-left p-2 rounded-lg hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 transition flex justify-between items-center group"
+                            >
+                              <span className="text-sm font-medium text-slate-300">{mgr.full_name}</span>
+                              <Plus size={14} className="text-slate-500 group-hover:text-purple-400" />
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </GlassCard>
+                  )}
 
-                  {/* Add Users */}
+                  {/* Add Users - Admin & Manager */}
                   <GlassCard className="sticky top-6">
                     <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                       <UserPlus className="text-cyan-400" /> Add Members
@@ -900,8 +1003,8 @@ export default function TeamManagerPage() {
                                   <div
                                     key={wh.day_of_week}
                                     className={`flex items-center gap-3 p-3 rounded-lg border transition ${wh.enabled
-                                        ? 'bg-emerald-500/10 border-emerald-500/30'
-                                        : 'bg-slate-800/50 border-slate-700/50'
+                                      ? 'bg-emerald-500/10 border-emerald-500/30'
+                                      : 'bg-slate-800/50 border-slate-700/50'
                                       }`}
                                   >
                                     <button
