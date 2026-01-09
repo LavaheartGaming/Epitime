@@ -22,6 +22,7 @@ from .views import (
     TimeEntryListView,
     UpdateUserView,
     UserListCreateView,
+    WorkingHoursView,
 )
 
 urlpatterns = [
@@ -40,6 +41,7 @@ urlpatterns = [
     path("team/members/", TeamMembersView.as_view(), name="team-members"),
     path("team/assign/", AdminAssignTeamView.as_view(), name="admin-assign-team"),
     path("team/members/<int:user_id>/time-entries/", TeamMemberTimeEntriesView.as_view(), name="team-member-entries"),
+    path("team/members/<int:user_id>/working-hours/", WorkingHoursView.as_view(), name="working-hours"),
     path("team/status/", TeamStatusSetView.as_view(), name="team-status-set"),
     path("team/time-entry/", TeamTimeEntryUpsertView.as_view(), name="team-time-entry-upsert"),
     path("me/status/", MyTodayStatusView.as_view(), name="my-today-status"),

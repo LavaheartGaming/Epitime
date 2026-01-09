@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, Clock, Shield, Plus, RefreshCcw,
   Trash2, X, Search, ChevronRight, UserPlus,
-  Lock, BarChart, Clipboard
+  Lock, BarChart, Clipboard, Calendar
 } from "lucide-react";
 import { Input } from "../components/Input";
 
@@ -37,6 +37,17 @@ type TimeEntry = {
   duration: string | null;  // "HH:MM:SS" or computed
   is_verified: boolean;
 };
+
+type WorkingHoursEntry = {
+  id?: number;
+  day_of_week: number;
+  day_name?: string;
+  start_time: string;
+  end_time: string;
+  enabled: boolean;
+};
+
+const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 // Simple reusable card component for glassmorphism effect
 const GlassCard = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => (
@@ -74,6 +85,11 @@ export default function TeamManagerPage() {
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
+
+  // Working Hours State
+  const [workingHours, setWorkingHours] = useState<WorkingHoursEntry[]>([]);
+  const [workingHoursLoading, setWorkingHoursLoading] = useState(false);
+  const [showWorkingHours, setShowWorkingHours] = useState(false);
 
   const canAccess = !!user && ["manager", "admin"].includes(user.role);
   const isAdmin = user?.role === "admin";
@@ -203,6 +219,56 @@ export default function TeamManagerPage() {
       setMsg({ type: "error", text: err.message });
     } finally {
       setResetLoading(false);
+    }
+  };
+
+  const fetchWorkingHours = async (userId: number) => {
+    setWorkingHoursLoading(true);
+    try {
+      const res = await fetchWithAuth(`${API_URL}/api/users/team/members/${userId}/working-hours/`);
+      const data = await res.json();
+      if (res.ok && Array.isArray(data)) {
+        // Create full week with enabled/disabled entries
+        const fullWeek: WorkingHoursEntry[] = DAY_NAMES.map((name, idx) => {
+          const existing = data.find((d: any) => d.day_of_week === idx);
+          return existing
+            ? { ...existing, enabled: true }
+            : { day_of_week: idx, day_name: name, start_time: "09:00", end_time: "17:00", enabled: false };
+        });
+        setWorkingHours(fullWeek);
+      }
+    } catch (e) {
+      setMsg({ type: "error", text: "Failed to load working hours" });
+    } finally {
+      setWorkingHoursLoading(false);
+    }
+  };
+
+  const saveWorkingHours = async () => {
+    if (!selectedMember) return;
+    setWorkingHoursLoading(true);
+    try {
+      const schedules = workingHours
+        .filter(wh => wh.enabled)
+        .map(wh => ({
+          day_of_week: wh.day_of_week,
+          start_time: wh.start_time,
+          end_time: wh.end_time
+        }));
+
+      const res = await fetchWithAuth(
+        `${API_URL}/api/users/team/members/${selectedMember.id}/working-hours/`,
+        "PUT",
+        { schedules }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+
+      setMsg({ type: "success", text: `Working hours updated for ${selectedMember.full_name}` });
+    } catch (err: any) {
+      setMsg({ type: "error", text: err.message });
+    } finally {
+      setWorkingHoursLoading(false);
     }
   };
 
@@ -795,6 +861,115 @@ export default function TeamManagerPage() {
                         )}
                       </div>
                     </div>
+                  </div>
+
+                  {/* Working Hours Section */}
+                  <div className="border-t border-slate-700 pt-6">
+                    <button
+                      className="w-full text-left mb-4 flex items-center justify-between group"
+                      onClick={() => {
+                        if (!showWorkingHours) {
+                          fetchWorkingHours(selectedMember.id);
+                        }
+                        setShowWorkingHours(!showWorkingHours);
+                      }}
+                    >
+                      <h3 className="font-bold text-lg flex items-center gap-2">
+                        <Calendar size={18} className="text-emerald-400" /> Working Hours Schedule
+                      </h3>
+                      <ChevronRight
+                        size={18}
+                        className={`text-slate-500 transition-transform ${showWorkingHours ? 'rotate-90' : ''}`}
+                      />
+                    </button>
+
+                    <AnimatePresence>
+                      {showWorkingHours && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="space-y-3 bg-slate-800/30 p-4 rounded-xl border border-slate-700">
+                            {workingHoursLoading ? (
+                              <p className="text-slate-500 text-sm">Loading...</p>
+                            ) : (
+                              <>
+                                {workingHours.map((wh, idx) => (
+                                  <div
+                                    key={wh.day_of_week}
+                                    className={`flex items-center gap-3 p-3 rounded-lg border transition ${wh.enabled
+                                        ? 'bg-emerald-500/10 border-emerald-500/30'
+                                        : 'bg-slate-800/50 border-slate-700/50'
+                                      }`}
+                                  >
+                                    <button
+                                      onClick={() => {
+                                        const newHours = [...workingHours];
+                                        newHours[idx].enabled = !newHours[idx].enabled;
+                                        setWorkingHours(newHours);
+                                      }}
+                                      className={`w-10 h-6 rounded-full transition relative ${wh.enabled ? 'bg-emerald-500' : 'bg-slate-600'
+                                        }`}
+                                    >
+                                      <div
+                                        className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${wh.enabled ? 'left-5' : 'left-1'
+                                          }`}
+                                      />
+                                    </button>
+
+                                    <span className={`w-24 font-medium ${wh.enabled ? 'text-white' : 'text-slate-500'}`}>
+                                      {DAY_NAMES[wh.day_of_week]}
+                                    </span>
+
+                                    {wh.enabled && (
+                                      <div className="flex items-center gap-2 flex-1">
+                                        <input
+                                          type="time"
+                                          value={wh.start_time}
+                                          onChange={(e) => {
+                                            const newHours = [...workingHours];
+                                            newHours[idx].start_time = e.target.value;
+                                            setWorkingHours(newHours);
+                                          }}
+                                          className="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500"
+                                        />
+                                        <span className="text-slate-500">to</span>
+                                        <input
+                                          type="time"
+                                          value={wh.end_time}
+                                          onChange={(e) => {
+                                            const newHours = [...workingHours];
+                                            newHours[idx].end_time = e.target.value;
+                                            setWorkingHours(newHours);
+                                          }}
+                                          className="bg-slate-900 border border-slate-600 rounded px-2 py-1 text-sm focus:outline-none focus:border-emerald-500"
+                                        />
+                                      </div>
+                                    )}
+
+                                    {!wh.enabled && (
+                                      <span className="text-slate-600 text-sm italic">Rest day</span>
+                                    )}
+                                  </div>
+                                ))}
+
+                                <div className="flex justify-end pt-2">
+                                  <button
+                                    onClick={saveWorkingHours}
+                                    disabled={workingHoursLoading}
+                                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-lg transition disabled:opacity-50"
+                                  >
+                                    {workingHoursLoading ? "Saving..." : "Save Working Hours"}
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                 </div>
