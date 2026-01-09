@@ -268,7 +268,10 @@ class TeamMembersView(APIView):
             if not request.user.team_id:
                 users_qs = User.objects.none()
             else:
-                users_qs = User.objects.filter(team_id=request.user.team_id).order_by("last_name", "first_name")
+                # Show team members AND unassigned users (potential recruits)
+                users_qs = User.objects.filter(
+                    models.Q(team_id=request.user.team_id) | models.Q(team_id__isnull=True)
+                ).order_by("last_name", "first_name")
         else:
             return Response({"error": "Unauthorized"}, status=403)
 
