@@ -1,7 +1,15 @@
 from django.db import IntegrityError
 from rest_framework import serializers
 
-from .models import Task, TeamStatus, TimeEntry, User, WorkingHours
+from .models import (
+    Conversation,
+    Message,
+    Task,
+    TeamStatus,
+    TimeEntry,
+    User,
+    WorkingHours,
+)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -106,8 +114,7 @@ class WorkingHoursSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
 
-# Chat Serializers
-from .models import Conversation, Message
+
 
 
 

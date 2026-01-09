@@ -3,6 +3,7 @@ import 'jest-axe/extend-expect';
 import { TextEncoder, TextDecoder } from 'util';
 
 // Mock TextEncoder/TextDecoder
+// @ts-ignore
 global.TextEncoder = TextEncoder;
 // @ts-ignore
 global.TextDecoder = TextDecoder;
@@ -53,13 +54,13 @@ jest.mock('recharts', () => {
 
 // Mock Lucide React
 jest.mock('lucide-react', () => new Proxy({}, {
-    get: (target, prop) => () => 'IconMock'
+    get: (_target, _prop) => () => 'IconMock'
 }));
 
 // Mock Framer Motion
 jest.mock('framer-motion', () => ({
     motion: new Proxy({}, {
-        get: (target, prop) => ({ children, ...props }: any) => children
+        get: (_target, _prop) => ({ children, ..._props }: any) => children
     }),
     AnimatePresence: ({ children }: any) => children,
 }));
