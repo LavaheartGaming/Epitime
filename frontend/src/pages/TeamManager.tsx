@@ -135,7 +135,7 @@ export default function TeamManagerPage() {
     } finally {
       setLoading(false);
     }
-  }, [API_URL, isAdmin]);
+  }, [API_URL]);
 
   const loadReports = async () => {
     setLoading(true);
@@ -393,7 +393,7 @@ export default function TeamManagerPage() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            <h1 className="text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+            <h1 className="text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-blue-500">
               Team Command
             </h1>
             <p className="text-slate-400 mt-1 text-lg">
@@ -404,7 +404,7 @@ export default function TeamManagerPage() {
           <div className="flex gap-3">
             <button
               onClick={loadData}
-              className="p-3 bg-slate-800/50 hover:bg-slate-700/50 text-cyan-400 rounded-xl border border-slate-700 transition"
+              className="p-3 bg-slate-800/50 hover:bg-slate-700/50 text-yellow-400 rounded-xl border border-slate-700 transition"
               title="Refresh Data"
             >
               <RefreshCcw size={20} className={loading ? "animate-spin" : ""} />
@@ -412,7 +412,7 @@ export default function TeamManagerPage() {
 
             <button
               onClick={loadReports}
-              className={`p-3 rounded-xl border border-slate-700 transition flex items-center gap-2 ${viewMode === "reports" ? "bg-cyan-500 text-black border-cyan-500" : "bg-slate-800/50 text-slate-300 hover:text-white"
+              className={`p-3 rounded-xl border border-slate-700 transition flex items-center gap-2 ${viewMode === "reports" ? "bg-yellow-500 text-black border-yellow-500" : "bg-slate-800/50 text-slate-300 hover:text-white"
                 }`}
               title="View Reports"
             >
@@ -425,7 +425,7 @@ export default function TeamManagerPage() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setViewMode("create_team")}
-                className="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(34,211,238,0.3)] transition"
+                className="px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(34,211,238,0.3)] transition"
               >
                 <Plus size={20} strokeWidth={3} />
                 Create New Team
@@ -484,13 +484,13 @@ export default function TeamManagerPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
               >
-                <GlassCard className="relative group hover:border-cyan-500/40 transition-all duration-300 hover:shadow-[0_0_30px_rgba(34,211,238,0.1)] h-full flex flex-col justify-between">
+                <GlassCard className="relative group hover:border-yellow-500/40 transition-all duration-300 hover:shadow-[0_0_30px_rgba(34,211,238,0.1)] h-full flex flex-col justify-between">
                   <div className="mb-6">
-                    <h3 className="text-2xl font-bold text-white group-hover:text-cyan-400 transition mb-2">
+                    <h3 className="text-2xl font-bold text-white group-hover:text-yellow-400 transition mb-2">
                       {team.name}
                     </h3>
                     {team.managers.length > 0 ? (
-                      <p className="text-sm text-cyan-200 mb-2">
+                      <p className="text-sm text-yellow-200 mb-2">
                         Leads: {team.managers.map(m => m.full_name).join(", ")}
                       </p>
                     ) : (
@@ -510,7 +510,7 @@ export default function TeamManagerPage() {
                         setSelectedTeamId(team.id);
                         setViewMode("manage_team");
                       }}
-                      className="w-full py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-medium text-sm transition flex items-center justify-center gap-2 group-hover:bg-cyan-500/10 group-hover:text-cyan-300"
+                      className="w-full py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-medium text-sm transition flex items-center justify-center gap-2 group-hover:bg-yellow-500/10 group-hover:text-yellow-300"
                     >
                       Manage Team <ChevronRight size={14} />
                     </button>
@@ -530,7 +530,7 @@ export default function TeamManagerPage() {
           >
             <div className="bg-slate-900/50 border border-slate-700 p-6 rounded-2xl">
               <h2 className="text-2xl font-bold mb-4 flex items-center gap-2 text-white">
-                <BarChart className="text-cyan-400" /> Team Performance Reports
+                <BarChart className="text-yellow-400" /> Team Performance Reports
               </h2>
               <p className="text-slate-400">
                 KPIs and stats for your team members. Hours are calculated based on closed sessions for today and this week.
@@ -565,7 +565,7 @@ export default function TeamManagerPage() {
 
                       <div className="grid grid-cols-3 gap-2 mt-4 text-center">
                         <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
-                          <div className="text-2xl font-mono font-bold text-cyan-400">{r.hours_today}h</div>
+                          <div className="text-2xl font-mono font-bold text-yellow-400">{r.hours_today}h</div>
                           <div className="text-xs text-slate-500 mt-1">Today</div>
                         </div>
                         <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
@@ -597,7 +597,7 @@ export default function TeamManagerPage() {
             <GlassCard>
               <div className="mb-6 border-b border-slate-700 pb-4">
                 <h2 className="text-2xl font-bold flex items-center gap-2">
-                  <Shield className="text-cyan-400" /> Create New Team
+                  <Shield className="text-yellow-400" /> Create New Team
                 </h2>
                 <p className="text-slate-400 text-sm mt-1">
                   Define a new operational unit. You can add managers and members after creation.
@@ -620,7 +620,7 @@ export default function TeamManagerPage() {
                   </label>
                   <textarea
                     id="team-desc"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 focus:border-cyan-500 outline-none transition min-h-[100px]"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 focus:border-yellow-500 outline-none transition min-h-[100px]"
                     placeholder="Purpose of this team..."
                     value={newTeamDesc}
                     onChange={e => setNewTeamDesc(e.target.value)}
@@ -637,7 +637,7 @@ export default function TeamManagerPage() {
                   <button
                     onClick={createTeam}
                     disabled={!newTeamName}
-                    className="px-6 py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Create Team
                   </button>
@@ -720,7 +720,7 @@ export default function TeamManagerPage() {
                 {/* Members List */}
                 <div>
                   <h3 className="text-xl font-bold flex items-center gap-2 mb-4 px-2">
-                    <Users className="text-cyan-400" /> Team Members
+                    <Users className="text-yellow-400" /> Team Members
                     <span className="text-sm font-normal text-slate-500">({currentTeamMembers.filter(m => m.role === 'user').length})</span>
                   </h3>
 
@@ -738,7 +738,7 @@ export default function TeamManagerPage() {
                           setSelectedMember(member);
                           fetchUserTimeEntries(member.id); // Assuming this function exists or need to verify
                         }}
-                        className="w-full bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl flex justify-between items-center group hover:bg-slate-800 transition cursor-pointer hover:border-cyan-500/30 text-left"
+                        className="w-full bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl flex justify-between items-center group hover:bg-slate-800 transition cursor-pointer hover:border-yellow-500/30 text-left"
                       >
                         <div className="flex items-center gap-4">
                           <div className={`w-3 h-3 rounded-full ${member.is_clocked_in ? 'bg-emerald-400' : 'bg-slate-600'}`} />
@@ -795,7 +795,7 @@ export default function TeamManagerPage() {
                   {/* Add Users - Admin & Manager */}
                   <GlassCard className="sticky top-6">
                     <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                      <UserPlus className="text-cyan-400" /> Add Members
+                      <UserPlus className="text-yellow-400" /> Add Members
                     </h3>
 
                     {/* Search */}

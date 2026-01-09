@@ -12,7 +12,7 @@ import {
 } from "recharts";
 // Framer Motion est une librairie React standard
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { Modal } from "../components/Modal";
@@ -400,7 +400,7 @@ export default function EpitimeDashboard() {
               onClick={() => setMode("daily")}
               aria-pressed={mode === "daily"}
               className={`px-4 py-1 rounded-full text-sm transition-colors ${mode === "daily"
-                ? "bg-cyan-400 text-slate-900"
+                ? "bg-yellow-400 text-slate-900"
                 : "bg-slate-700 hover:bg-slate-600"
                 }`}
             >
@@ -410,7 +410,7 @@ export default function EpitimeDashboard() {
               onClick={() => setMode("weekly")}
               aria-pressed={mode === "weekly"}
               className={`px-4 py-1 rounded-full text-sm transition-colors ${mode === "weekly"
-                ? "bg-cyan-400 text-slate-900"
+                ? "bg-yellow-400 text-slate-900"
                 : "bg-slate-700 hover:bg-slate-600"
                 }`}
             >
@@ -452,18 +452,18 @@ export default function EpitimeDashboard() {
           <div className="flex gap-6">
             <div className="bg-slate-800/60 p-4 rounded-xl text-center min-w-[140px]">
               <h3 className="text-lg font-semibold">Total Hours</h3>
-              <p className="text-2xl font-bold text-cyan-400">{totalHours}h</p>
+              <p className="text-2xl font-bold text-yellow-400">{totalHours}h</p>
             </div>
             <div className="bg-slate-800/60 p-4 rounded-xl text-center min-w-[140px]">
               <h3 className="text-lg font-semibold">Average</h3>
-              <p className="text-2xl font-bold text-cyan-400">{averageHours}h</p>
+              <p className="text-2xl font-bold text-yellow-400">{averageHours}h</p>
             </div>
           </div>
 
           <Button
             onClick={() => setShowTable(!showTable)}
             variant="secondary"
-            className="rounded-full bg-cyan-400 text-slate-900 hover:bg-cyan-300 border-none"
+            className="rounded-full bg-yellow-400 text-slate-900 hover:bg-yellow-300 border-none"
           >
             {showTable ? "Hide detailed hours" : "+ View detailed hours table"}
           </Button>
@@ -504,7 +504,7 @@ export default function EpitimeDashboard() {
                         <td className="py-2">{date}</td>
                         <td className="py-2">{clockIn}</td>
                         <td className="py-2">{clockOut}</td>
-                        <td className="py-2 text-cyan-400">{entry.total_hours || "—"}h</td>
+                        <td className="py-2 text-yellow-400">{entry.total_hours || "—"}h</td>
 
                       </tr>
                     );
@@ -522,7 +522,7 @@ export default function EpitimeDashboard() {
         <div className="flex items-center gap-3 mb-6">
           <h2 className="text-xl font-bold">my team</h2>
           {teamName && (
-            <span className="px-3 py-1 bg-cyan-400/20 text-cyan-400 rounded-full text-sm font-medium">
+            <span className="px-3 py-1 bg-yellow-400/20 text-yellow-400 rounded-full text-sm font-medium">
               {teamName}
             </span>
           )}
@@ -588,7 +588,7 @@ export default function EpitimeDashboard() {
                         setSelectedMate(tm);
                         setDrawerOpen(true);
                       }}
-                      className="flex justify-between items-center bg-slate-800/60 px-4 py-3 rounded-xl hover:bg-slate-700 border border-slate-600 hover:border-cyan-400 text-white w-full transition-all"
+                      className="flex justify-between items-center bg-slate-800/60 px-4 py-3 rounded-xl hover:bg-slate-700 border border-slate-600 hover:border-yellow-400 text-white w-full transition-all"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center text-slate-300 font-semibold">
@@ -649,7 +649,7 @@ export default function EpitimeDashboard() {
           <h2 className="text-xl font-bold">project tasks overview</h2>
           <button
             onClick={() => setShowTaskModal(true)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold shadow-lg hover:shadow-cyan-400/25 hover:scale-105 transition-all duration-200"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 to-blue-500 text-slate-900 font-semibold shadow-lg hover:shadow-yellow-400/25 hover:scale-105 transition-all duration-200"
           >
             <Plus size={20} aria-hidden="true" />
             <span>Create Task</span>
@@ -677,7 +677,7 @@ export default function EpitimeDashboard() {
                     setSelectedTask(t);
                     setTaskDetailOpen(true);
                   }}
-                  className="bg-slate-800/60 rounded-xl p-4 border border-slate-700 hover:border-cyan-400 transition text-left w-full"
+                  className="bg-slate-800/60 rounded-xl p-4 border border-slate-700 hover:border-yellow-400 transition text-left w-full"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium text-sm flex-1">{t.title}</h4>
@@ -692,14 +692,14 @@ export default function EpitimeDashboard() {
                       {t.priority}
                     </span>
                   </div>
-                  <div className="text-xs text-cyan-400 mb-1">
+                  <div className="text-xs text-yellow-400 mb-1">
                     Created by: {t.created_by_name || "Me"}
                   </div>
                   <div className="text-xs text-slate-400 mb-2">
                     Assigned to: {t.assigned_to_name || "Me"}
                   </div>
                   <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-                    <div className="h-2 bg-cyan-400" style={{ width: `${t.progress}%` }} />
+                    <div className="h-2 bg-yellow-400" style={{ width: `${t.progress}%` }} />
                   </div>
                   <div className="flex justify-between mt-2 text-xs text-slate-400">
                     <span>{t.progress}% done</span>
@@ -744,7 +744,7 @@ export default function EpitimeDashboard() {
                       </div>
                       <button
                         onClick={() => handleUpdateProgress(t.id, 0)}
-                        className="w-full text-xs px-3 py-2 rounded-lg bg-cyan-400/20 text-cyan-400 hover:bg-cyan-400/30 transition"
+                        className="w-full text-xs px-3 py-2 rounded-lg bg-yellow-400/20 text-yellow-400 hover:bg-yellow-400/30 transition"
                       >
                         ↩ Restore to Active
                       </button>
@@ -757,53 +757,7 @@ export default function EpitimeDashboard() {
         })()}
       </div>
 
-      {/* Assigned to Me Section - Tasks assigned by others */}
-      {(() => {
-        const assignedToMe = tasks.filter(
-          (t) => t.assigned_to === user?.id && t.created_by !== user?.id
-        );
-        if (assignedToMe.length === 0) return null;
-        return (
-          <div className="bg-[#0F2658] rounded-2xl shadow-lg p-6 w-[90%] max-w-6xl mt-10">
-            <h2 className="text-xl font-bold mb-6">tasks assigned to me</h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              {assignedToMe.map((t: TaskType) => (
-                <div
-                  key={t.id}
-                  className="bg-slate-800/60 rounded-xl p-4 border border-slate-700 hover:border-cyan-400 transition"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-sm flex-1">{t.title}</h4>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full capitalize ${t.priority === "high"
-                        ? "bg-red-500/80"
-                        : t.priority === "medium"
-                          ? "bg-yellow-500/80"
-                          : "bg-green-500/80"
-                        }`}
-                    >
-                      {t.priority}
-                    </span>
-                  </div>
-                  <div className="text-xs text-cyan-400 mb-2">
-                    Assigned by: {t.created_by_name || "Unknown"}
-                  </div>
-                  <div className="text-xs text-slate-400 mb-2">
-                    Duration: {t.estimated_duration}h
-                  </div>
-                  <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-                    <div className="h-2 bg-cyan-400" style={{ width: `${t.progress}%` }} />
-                  </div>
-                  <div className="flex justify-between mt-2 text-xs text-slate-400">
-                    <span>{t.progress}% done</span>
-                    {t.due_date && <span>Due {new Date(t.due_date).toLocaleString()}</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
+
 
       {/* Drawer */}
       <AnimatePresence>
@@ -818,7 +772,7 @@ export default function EpitimeDashboard() {
             <div className="p-6 border-b border-white/10">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-slate-900 font-bold text-xl">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-400 to-blue-500 flex items-center justify-center text-slate-900 font-bold text-xl">
                     {selectedMate?.full_name?.charAt(0).toUpperCase()}
                   </div>
                   <div>
@@ -866,7 +820,7 @@ export default function EpitimeDashboard() {
                   setDrawerOpen(false);
                   navigate(`/chat?userId=${selectedMate?.id}`);
                 }}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold hover:shadow-lg hover:shadow-cyan-400/20 transition flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-blue-500 text-slate-900 font-semibold hover:shadow-lg hover:shadow-yellow-400/20 transition flex items-center justify-center gap-2"
               >
                 💬 Start Chat with {selectedMate?.full_name?.split(" ")[0]}
               </button>
@@ -890,7 +844,7 @@ export default function EpitimeDashboard() {
                       id="task-priority-drawer"
                       value={taskPriority}
                       onChange={(e) => setTaskPriority(e.target.value as "low" | "medium" | "high")}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-cyan-400 focus:outline-none"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-yellow-400 focus:outline-none"
                     >
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
@@ -966,22 +920,14 @@ export default function EpitimeDashboard() {
                   />
                   <Button
                     onClick={() => { }}
-                    className="w-full bg-cyan-400 text-slate-900 border-none hover:bg-cyan-300"
+                    className="w-full bg-yellow-400 text-slate-900 border-none hover:bg-yellow-300"
                   >
                     Confirm meeting
                   </Button>
                 </div>
               </div>
 
-              {/* Start a Chat */}
-              <div className="border-t border-white/10 pt-6">
-                <Button
-                  onClick={() => navigate("/chat")}
-                  className="w-full bg-cyan-400 hover:bg-cyan-300 text-slate-900 border-none"
-                >
-                  Go to Chat
-                </Button>
-              </div>
+
             </div>
           </motion.aside>
         )}
@@ -1010,7 +956,7 @@ export default function EpitimeDashboard() {
               id="task-priority"
               value={newTask.priority}
               onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as "low" | "medium" | "high" })}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-cyan-400 focus:outline-none"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-yellow-400 focus:outline-none"
             >
               <option value="low">Low</option>
               <option value="medium">Medium</option>
@@ -1039,7 +985,7 @@ export default function EpitimeDashboard() {
             onClick={handleCreateTask}
             disabled={taskLoading || !newTask.title.trim()}
             loading={taskLoading}
-            className="w-full mt-4 bg-cyan-400 text-slate-900 hover:bg-cyan-300 border-none"
+            className="w-full mt-4 bg-yellow-400 text-slate-900 hover:bg-yellow-300 border-none"
           >
             Create Task
           </Button>
@@ -1075,7 +1021,7 @@ export default function EpitimeDashboard() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-400">Created by:</span>
-                <span className="text-cyan-400">{selectedTask.created_by_name || "Me"}</span>
+                <span className="text-yellow-400">{selectedTask.created_by_name || "Me"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Assigned to:</span>
@@ -1097,10 +1043,10 @@ export default function EpitimeDashboard() {
             <div>
               <div className="flex justify-between mb-2">
                 <span className="text-sm text-slate-300">Progress</span>
-                <span className="text-sm text-cyan-400">{selectedTask.progress}%</span>
+                <span className="text-sm text-yellow-400">{selectedTask.progress}%</span>
               </div>
               <div className="w-full h-3 bg-slate-700 rounded-full overflow-hidden mb-4">
-                <div className="h-3 bg-cyan-400 transition-all" style={{ width: `${selectedTask.progress}%` }} />
+                <div className="h-3 bg-yellow-400 transition-all" style={{ width: `${selectedTask.progress}%` }} />
               </div>
 
               {/* Progress Buttons */}
@@ -1110,7 +1056,7 @@ export default function EpitimeDashboard() {
                     key={progress}
                     onClick={() => handleUpdateProgress(selectedTask.id, progress)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition ${selectedTask.progress === progress
-                      ? "bg-cyan-400 text-slate-900"
+                      ? "bg-yellow-400 text-slate-900"
                       : "bg-slate-700 text-white hover:bg-slate-600"
                       }`}
                   >

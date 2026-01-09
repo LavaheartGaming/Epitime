@@ -8,8 +8,12 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Conversation, Message, Task, Team, TeamStatus, TimeEntry, User, WorkingHours
-from .serializers import ConversationSerializer, MessageSerializer, TaskSerializer, TeamStatusSerializer, TimeEntrySerializer, UserSerializer, WorkingHoursSerializer
+from .models import (Conversation, Message, Task, Team, TeamStatus, TimeEntry,
+                     User, WorkingHours)
+from .serializers import (ConversationSerializer, MessageSerializer,
+                          TaskSerializer, TeamStatusSerializer,
+                          TimeEntrySerializer, UserSerializer,
+                          WorkingHoursSerializer)
 
 
 class TeamSerializer(serializers.ModelSerializer):
