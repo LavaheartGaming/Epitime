@@ -6,14 +6,20 @@ from .views import (
     ChangePasswordView,
     ClockInView,
     ClockOutView,
+    ConversationDetailView,
+    ConversationListCreateView,
+    ConversationMessagesView,
     DeleteAccountView,
     LoginView,
     MeView,
+    MessageDetailView,
     MyTeamView,
     MyTodayStatusView,
     RegisterView,
+    StartDirectConversationView,
     TaskDetailView,
     TaskListCreateView,
+    TeamConversationView,
     TeamDetailView,
     TeamListCreateView,
     TeamMembersView,
@@ -50,4 +56,14 @@ urlpatterns = [
     path("me/team/", MyTeamView.as_view(), name="my-team"),
     path("tasks/", TaskListCreateView.as_view(), name="task-list-create"),
     path("tasks/<int:pk>/", TaskDetailView.as_view(), name="task-detail"),
+    # Chat endpoints
+    path("chat/conversations/", ConversationListCreateView.as_view(), name="conversation-list"),
+    path("chat/conversations/<int:conversation_id>/", ConversationDetailView.as_view(), name="conversation-detail"),
+    path("chat/conversations/<int:conversation_id>/messages/", ConversationMessagesView.as_view(), name="conversation-messages"),
+    path("chat/messages/<int:message_id>/", MessageDetailView.as_view(), name="message-detail"),
+    path("chat/team/", TeamConversationView.as_view(), name="team-conversation"),
+    path("chat/direct/", StartDirectConversationView.as_view(), name="start-direct-chat"),
 ]
+
+
+

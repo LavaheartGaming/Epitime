@@ -8,8 +8,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Task, Team, TeamStatus, TimeEntry, User, WorkingHours
-from .serializers import TaskSerializer, TeamStatusSerializer, TimeEntrySerializer, UserSerializer, WorkingHoursSerializer
+from .models import Conversation, Message, Task, Team, TeamStatus, TimeEntry, User, WorkingHours
+from .serializers import ConversationSerializer, MessageSerializer, TaskSerializer, TeamStatusSerializer, TimeEntrySerializer, UserSerializer, WorkingHoursSerializer
 
 
 class TeamSerializer(serializers.ModelSerializer):
@@ -724,3 +724,209 @@ class AdminResetPasswordView(APIView):
         target_user.save()
 
         return Response({"message": f"✅ Password for {target_user.email} has been reset."}, status=status.HTTP_200_OK)
+
+
+# ==== CHAT API ====
+
+class ConversationListCreateView(APIView):
+    """List user's conversations or create a new one"""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Get conversations where user is a participant
+        conversations = request.user.conversations.all()
+        serializer = ConversationSerializer(conversations, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        name = request.data.get("name")
+        participant_ids = request.data.get("participants", [])
+        is_direct = request.data.get("is_direct", False)
+
+        if not name:
+            return Response({"error": "name is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create conversation
+        conversation = Conversation.objects.create(
+            name=name,
+            team=request.user.team,
+            is_direct=is_direct,
+        )
+        # Add creator as participant
+        conversation.participants.add(request.user)
+        
+        # Add other participants
+        if participant_ids:
+            users = User.objects.filter(id__in=participant_ids)
+            conversation.participants.add(*users)
+
+        serializer = ConversationSerializer(conversation)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class ConversationMessagesView(APIView):
+    """Get messages from a conversation or send a new message"""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, conversation_id):
+        conversation = get_object_or_404(Conversation, id=conversation_id)
+        
+        # Check if user is a participant
+        if not conversation.participants.filter(id=request.user.id).exists():
+            return Response({"error": "Not a participant"}, status=status.HTTP_403_FORBIDDEN)
+
+        messages = conversation.messages.all()
+        serializer = MessageSerializer(messages, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, conversation_id):
+        conversation = get_object_or_404(Conversation, id=conversation_id)
+        
+        # Check if user is a participant
+        if not conversation.participants.filter(id=request.user.id).exists():
+            return Response({"error": "Not a participant"}, status=status.HTTP_403_FORBIDDEN)
+
+        content = request.data.get("content")
+        if not content:
+            return Response({"error": "content is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        message = Message.objects.create(
+            conversation=conversation,
+            sender=request.user,
+            content=content,
+        )
+        # Update conversation timestamp
+        conversation.save()
+
+        serializer = MessageSerializer(message)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class TeamConversationView(APIView):
+    """Get or create team conversation for all team members"""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not request.user.team:
+            return Response({"error": "No team assigned"}, status=status.HTTP_400_BAD_REQUEST)
+
+        team = request.user.team
+        
+        # Try to find existing team conversation
+        conversation = Conversation.objects.filter(team=team, is_direct=False).first()
+        
+        if not conversation:
+            # Create team conversation
+            conversation = Conversation.objects.create(
+                name=team.name,
+                team=team,
+                is_direct=False,
+            )
+            # Add all team members as participants
+            team_members = User.objects.filter(team=team)
+            conversation.participants.add(*team_members)
+
+        # Ensure current user is participant
+        if not conversation.participants.filter(id=request.user.id).exists():
+            conversation.participants.add(request.user)
+
+        serializer = ConversationSerializer(conversation)
+        return Response(serializer.data)
+
+
+class StartDirectConversationView(APIView):
+    """Start or get a direct conversation with another user"""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        target_user_id = request.data.get("user_id")
+        
+        if not target_user_id:
+            return Response({"error": "user_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        target_user = get_object_or_404(User, id=target_user_id)
+        
+        if target_user.id == request.user.id:
+            return Response({"error": "Cannot chat with yourself"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Try to find existing direct conversation between these two users
+        existing = Conversation.objects.filter(
+            is_direct=True,
+            participants=request.user
+        ).filter(
+            participants=target_user
+        ).first()
+
+        if existing:
+            serializer = ConversationSerializer(existing)
+            return Response(serializer.data)
+
+        # Create new direct conversation
+        conversation = Conversation.objects.create(
+            name=f"{request.user.first_name} & {target_user.first_name}",
+            is_direct=True,
+        )
+        conversation.participants.add(request.user, target_user)
+
+        serializer = ConversationSerializer(conversation)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class MessageDetailView(APIView):
+    """Edit or delete a message"""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, message_id):
+        message = get_object_or_404(Message, id=message_id)
+        
+        # Only sender can edit
+        if message.sender.id != request.user.id:
+            return Response({"error": "Cannot edit others' messages"}, status=status.HTTP_403_FORBIDDEN)
+
+        content = request.data.get("content")
+        if not content:
+            return Response({"error": "content is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        message.content = content
+        message.save()
+
+        serializer = MessageSerializer(message)
+        return Response(serializer.data)
+
+    def delete(self, request, message_id):
+        message = get_object_or_404(Message, id=message_id)
+        
+        # Only sender can delete
+        if message.sender.id != request.user.id:
+            return Response({"error": "Cannot delete others' messages"}, status=status.HTTP_403_FORBIDDEN)
+
+        message.delete()
+        return Response({"message": "Message deleted"}, status=status.HTTP_200_OK)
+
+
+class ConversationDetailView(APIView):
+    """Delete a conversation"""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, conversation_id):
+        conversation = get_object_or_404(Conversation, id=conversation_id)
+        
+        # Check if user is a participant
+        if not conversation.participants.filter(id=request.user.id).exists():
+            return Response({"error": "Not a participant"}, status=status.HTTP_403_FORBIDDEN)
+
+        # Only allow deleting direct conversations
+        if not conversation.is_direct:
+            return Response({"error": "Cannot delete team conversations"}, status=status.HTTP_400_BAD_REQUEST)
+
+        conversation.delete()
+        return Response({"message": "Conversation deleted"}, status=status.HTTP_200_OK)
+
+
+

@@ -190,3 +190,50 @@ class WorkingHours(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.get_day_of_week_display()} ({self.start_time} - {self.end_time})"
+
+
+# Chat Models
+class Conversation(models.Model):
+    """A conversation/chat room for team members"""
+    name = models.CharField(max_length=100)
+    team = models.ForeignKey(
+        Team,
+        on_delete=models.CASCADE,
+        related_name="conversations",
+        null=True,
+        blank=True,
+    )
+    # For direct messages between 2 users
+    is_direct = models.BooleanField(default=False)
+    participants = models.ManyToManyField("users.User", related_name="conversations")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return self.name
+
+
+class Message(models.Model):
+    """A message in a conversation"""
+    conversation = models.ForeignKey(
+        Conversation,
+        on_delete=models.CASCADE,
+        related_name="messages",
+    )
+    sender = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="sent_messages",
+    )
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.sender.full_name}: {self.content[:50]}"
+
