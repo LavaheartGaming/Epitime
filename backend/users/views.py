@@ -8,8 +8,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Task, Team, TeamStatus, TimeEntry, User
-from .serializers import TaskSerializer, TeamStatusSerializer, TimeEntrySerializer, UserSerializer
+from .models import Task, Team, TeamStatus, TimeEntry, User, WorkingHours
+from .serializers import TaskSerializer, TeamStatusSerializer, TimeEntrySerializer, UserSerializer, WorkingHoursSerializer
 
 
 class TeamSerializer(serializers.ModelSerializer):
@@ -272,6 +272,58 @@ class TeamMemberTimeEntriesView(APIView):
 
         entries = TimeEntry.objects.filter(user=target).order_by("-clock_in")[:300]
         return Response(TimeEntrySerializer(entries, many=True).data, status=status.HTTP_200_OK)
+
+
+# ---- Manager/Admin: view/set working hours for a team member ----
+class WorkingHoursView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated, IsManagerOrAdmin]
+
+    def get(self, request, user_id: int):
+        """Get working hours for a user."""
+        target = get_object_or_404(User, id=user_id)
+
+        if request.user.role != "admin" and not _is_in_manager_team(request.user, target):
+            return Response({"error": "Not allowed."}, status=status.HTTP_403_FORBIDDEN)
+
+        hours = WorkingHours.objects.filter(user=target)
+        return Response(WorkingHoursSerializer(hours, many=True).data, status=status.HTTP_200_OK)
+
+    def put(self, request, user_id: int):
+        """Set working hours for a user. Expects array of day schedules."""
+        target = get_object_or_404(User, id=user_id)
+
+        if request.user.role != "admin" and not _is_in_manager_team(request.user, target):
+            return Response({"error": "Not allowed."}, status=status.HTTP_403_FORBIDDEN)
+
+        schedules = request.data.get("schedules", [])
+        if not isinstance(schedules, list):
+            return Response({"error": "schedules must be an array."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Delete existing hours and create new ones
+        WorkingHours.objects.filter(user=target).delete()
+
+        created = []
+        for item in schedules:
+            day = item.get("day_of_week")
+            start = item.get("start_time")
+            end = item.get("end_time")
+
+            if day is None or not start or not end:
+                continue  # Skip invalid entries
+
+            try:
+                wh = WorkingHours.objects.create(
+                    user=target,
+                    day_of_week=int(day),
+                    start_time=start,
+                    end_time=end
+                )
+                created.append(wh)
+            except Exception:
+                continue  # Skip invalid entries
+
+        return Response(WorkingHoursSerializer(created, many=True).data, status=status.HTTP_200_OK)
 
 
 # ---- Manager/Admin: set today's status (late/pto/normal) ----

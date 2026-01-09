@@ -128,3 +128,61 @@ class TestTeam:
         assert response.status_code == status.HTTP_200_OK
         # Verify time entry was created
         assert TimeEntry.objects.filter(user=employee).count() == 1
+
+    def test_manager_get_working_hours(self, api_client, manager, employee):
+        """GET /api/users/team/members/<user_id>/working-hours/ - Manager views working hours"""
+        from users.models import WorkingHours
+
+        # Assign employee to manager's team
+        team = Team.objects.create(name="Hours Team", created_by=manager)
+        employee.team = team
+        employee.save()
+        manager.team = team
+        manager.save()
+
+        # Create working hours for employee
+        WorkingHours.objects.create(user=employee, day_of_week=0, start_time="09:00", end_time="17:00")
+        WorkingHours.objects.create(user=employee, day_of_week=1, start_time="09:00", end_time="17:00")
+
+        api_client.force_authenticate(user=manager)
+        url = reverse("working-hours", kwargs={"user_id": employee.id})
+        response = api_client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 2
+
+    def test_manager_set_working_hours(self, api_client, manager, employee):
+        """PUT /api/users/team/members/<user_id>/working-hours/ - Manager sets working hours"""
+        # Assign employee to manager's team
+        team = Team.objects.create(name="Set Hours Team", created_by=manager)
+        employee.team = team
+        employee.save()
+        manager.team = team
+        manager.save()
+
+        api_client.force_authenticate(user=manager)
+        url = reverse("working-hours", kwargs={"user_id": employee.id})
+        schedules = [
+            {"day_of_week": 0, "start_time": "09:00", "end_time": "17:00"},
+            {"day_of_week": 1, "start_time": "09:00", "end_time": "17:00"},
+            {"day_of_week": 2, "start_time": "10:00", "end_time": "18:00"},
+        ]
+        response = api_client.put(url, {"schedules": schedules}, format="json")
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 3
+
+        from users.models import WorkingHours
+        assert WorkingHours.objects.filter(user=employee).count() == 3
+
+    def test_manager_cannot_set_hours_for_non_team_member(self, api_client, manager, employee):
+        """Manager cannot set working hours for user not in their team"""
+        team1 = Team.objects.create(name="Manager Team", created_by=manager)
+        team2 = Team.objects.create(name="Other Team", created_by=manager)
+        manager.team = team1
+        manager.save()
+        employee.team = team2
+        employee.save()
+
+        api_client.force_authenticate(user=manager)
+        url = reverse("working-hours", kwargs={"user_id": employee.id})
+        response = api_client.put(url, {"schedules": []}, format="json")
+        assert response.status_code == status.HTTP_403_FORBIDDEN

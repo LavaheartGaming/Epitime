@@ -1,7 +1,7 @@
 from django.db import IntegrityError
 from rest_framework import serializers
 
-from .models import Task, TeamStatus, TimeEntry, User
+from .models import Task, TeamStatus, TimeEntry, User, WorkingHours
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -95,3 +95,12 @@ class TaskSerializer(serializers.ModelSerializer):
 
     def get_created_by_name(self, obj):
         return obj.created_by.full_name if obj.created_by else None
+
+
+class WorkingHoursSerializer(serializers.ModelSerializer):
+    day_name = serializers.CharField(source="get_day_of_week_display", read_only=True)
+
+    class Meta:
+        model = WorkingHours
+        fields = ["id", "day_of_week", "day_name", "start_time", "end_time"]
+        read_only_fields = ["id"]
