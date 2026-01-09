@@ -7,6 +7,7 @@ export interface User {
   role: string;
   phone_number: string;
   two_factor_enabled?: boolean;
+  team_id?: number | null;
 }
 
 interface AuthContextType {

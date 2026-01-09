@@ -113,6 +113,7 @@ class MeView(APIView):
             "role": user.role,
             "phone_number": user.phone_number,
             "two_factor_enabled": user.two_factor_enabled,
+            "team_id": user.team_id,
         }, status=status.HTTP_200_OK)
 
 
@@ -167,7 +168,30 @@ class ClockInView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        entry = TimeEntry.objects.create(user=user, clock_in=timezone.now())
+        now = timezone.now()
+        entry = TimeEntry.objects.create(user=user, clock_in=now)
+
+        # Check for lateness based on WorkingHours
+        local_now = timezone.localtime(now)
+        current_day = local_now.weekday()  # 0=Monday, 6=Sunday
+
+        try:
+            wh = WorkingHours.objects.get(user=user, day_of_week=current_day)
+            # Check if clock-in is strictly after start time
+            # We can add a small grace period if needed, but user asked for "required time"
+            if local_now.time() > wh.start_time:
+                # Mark as late
+                TeamStatus.objects.update_or_create(
+                    user=user,
+                    date=local_now.date(),
+                    defaults={
+                        "status": "late",
+                        "note": f"Late arrival (Expected: {wh.start_time.strftime('%H:%M')})"
+                    }
+                )
+        except WorkingHours.DoesNotExist:
+            pass
+
         return Response(
             {"message": "✅ Clocked in successfully.", "entry": TimeEntrySerializer(entry).data},
             status=status.HTTP_200_OK,
@@ -462,9 +486,10 @@ class TeamDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 # ---- Admin: Assign User to Team ----
+# ---- Admin/Manager: Assign User to Team ----
 class AdminAssignTeamView(APIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsManagerOrAdmin]
 
     def put(self, request):
         user_id = request.data.get("user_id")
@@ -474,6 +499,24 @@ class AdminAssignTeamView(APIView):
             return Response({"error": "user_id is required"}, status=400)
 
         target = get_object_or_404(User, id=user_id)
+        
+        # Validation for Managers
+        if request.user.role == "manager":
+            # Can only operate on their own team
+            if not request.user.team:
+                return Response({"error": "You do not have a team to manage."}, status=403)
+            
+            # If removing (team_id is None)
+            if team_id is None:
+                # Can only remove if user is currently in their team
+                if target.team != request.user.team:
+                    return Response({"error": "Cannot remove user from another team."}, status=403)
+            
+            # If adding (team_id is set)
+            else:
+                # Can only add to their own team
+                if int(team_id) != request.user.team.id:
+                    return Response({"error": "Cannot assign user to another team."}, status=403)
 
         if team_id is None:
             target.team = None
@@ -724,3 +767,71 @@ class AdminResetPasswordView(APIView):
         target_user.save()
 
         return Response({"message": f"✅ Password for {target_user.email} has been reset."}, status=status.HTTP_200_OK)
+# ---- Reports: KPIs ----
+class TeamReportsView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated, IsManagerOrAdmin]
+
+    def get(self, request):
+        today = timezone.localdate()
+        start_of_week = today - timezone.timedelta(days=today.weekday())
+        start_of_month = today.replace(day=1)
+
+        # 1. Determine users to report on
+        if request.user.role == "admin":
+            users_qs = User.objects.all().order_by("last_name", "first_name")
+        elif request.user.role == "manager":
+            if request.user.team:
+                users_qs = User.objects.filter(team=request.user.team)
+                # Optionally exclude self if manager shouldn't see their own stats here, 
+                # but usually managers want to see everyone in the team.
+            else:
+                users_qs = User.objects.none()
+        else:
+            return Response({"error": "Unauthorized"}, status=403)
+
+        report_data = []
+
+        # Bulk fetch/optimization is possible but loop is fine for small teams
+        for user in users_qs:
+            # Hours Today
+            daily_entries = TimeEntry.objects.filter(user=user, clock_in__date=today)
+            hours_today = 0.0
+            for e in daily_entries:
+                if e.total_hours:
+                    hours_today += e.total_hours
+                elif e.clock_out is None:
+                    # Add current duration for live tracking?
+                    # Let's keep it simple: only closed sessions or just add a simple diff
+                    delta = timezone.now() - e.clock_in
+                    hours_today += delta.total_seconds() / 3600
+
+            # Hours Week
+            weekly_entries = TimeEntry.objects.filter(user=user, clock_in__date__gte=start_of_week)
+            hours_week = 0.0
+            for e in weekly_entries:
+                if e.total_hours:
+                    hours_week += e.total_hours
+                elif e.clock_out is None:
+                    delta = timezone.now() - e.clock_in
+                    hours_week += delta.total_seconds() / 3600
+
+            # Lateness Month
+            lates_month = TeamStatus.objects.filter(
+                user=user, 
+                status='late', 
+                date__gte=start_of_month
+            ).count()
+
+            report_data.append({
+                "id": user.id,
+                "full_name": user.full_name,
+                "email": user.email,
+                "role": user.role,
+                "hours_today": round(hours_today, 2),
+                "hours_week": round(hours_week, 2),
+                "lates_month": lates_month,
+                "team_name": user.team.name if user.team else "No Team"
+            })
+
+        return Response(report_data, status=status.HTTP_200_OK)

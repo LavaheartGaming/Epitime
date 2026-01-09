@@ -14,6 +14,7 @@ export interface InputProps {
     helpText?: string;
     autoComplete?: string;
     className?: string;
+    labelClassName?: string;
     startIcon?: React.ReactNode;
     endIcon?: React.ReactNode;
 }
@@ -31,6 +32,7 @@ export const Input: React.FC<InputProps> = ({
     helpText,
     autoComplete,
     className = '',
+    labelClassName = '',
     startIcon,
     endIcon,
 }) => {
@@ -40,7 +42,7 @@ export const Input: React.FC<InputProps> = ({
 
     return (
         <div className={`input-group ${className}`}>
-            <label htmlFor={id} className="input-label">
+            <label htmlFor={id} className={`input-label ${labelClassName}`}>
                 {label}
                 {required && (
                     <span className="input-required" aria-label="requis">

@@ -115,7 +115,7 @@ export default function LoginPage() {
         onClose={() => setNotificationMessage("")}
         title="Notification"
       >
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-4 text-gray-900">
           <p className="text-lg font-semibold">{notificationMessage}</p>
           <Button onClick={() => setNotificationMessage("")}>OK</Button>
         </div>
@@ -143,6 +143,7 @@ export default function LoginPage() {
                 <Input
                   id="first_name"
                   label="First Name"
+                  labelClassName="text-yellow-400"
                   value={formData.first_name}
                   onChange={(val) => updateField("first_name", val)}
                   required
@@ -155,6 +156,7 @@ export default function LoginPage() {
                 <Input
                   id="last_name"
                   label="Last Name"
+                  labelClassName="text-yellow-400"
                   value={formData.last_name}
                   onChange={(val) => updateField("last_name", val)}
                   required
@@ -168,6 +170,7 @@ export default function LoginPage() {
           <Input
             id="email"
             label="Email"
+            labelClassName="text-yellow-400"
             type="email"
             value={formData.email}
             onChange={(val) => updateField("email", val)}
@@ -180,6 +183,7 @@ export default function LoginPage() {
             <Input
               id="phone_number"
               label="Phone number"
+              labelClassName="text-yellow-400"
               type="tel"
               value={formData.phone_number}
               onChange={(val) => updateField("phone_number", val)}
@@ -192,6 +196,7 @@ export default function LoginPage() {
           <Input
             id="password"
             label="Password"
+            labelClassName="text-yellow-400"
             type={showPassword ? "text" : "password"}
             value={formData.password}
             onChange={(val) => updateField("password", val)}
@@ -214,6 +219,7 @@ export default function LoginPage() {
             <Input
               id="confirmPassword"
               label="Confirm Password"
+              labelClassName="text-yellow-400"
               type="password"
               value={formData.confirmPassword}
               onChange={(val) => updateField("confirmPassword", val)}
