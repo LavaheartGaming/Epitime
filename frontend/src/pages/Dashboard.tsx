@@ -25,7 +25,10 @@ type TaskType = {
   estimated_duration: number;
   progress: number;
   due_date: string | null;
+  assigned_to: number | null;
   assigned_to_name: string;
+  created_by: number | null;
+  created_by_name: string;
 };
 
 // Le composant doit être englobé par un <Router> (React Router) pour que useNavigate fonctionne.
@@ -47,6 +50,7 @@ export default function EpitimeDashboard() {
 
   const [team, setTeam] = useState<TeamMate[]>([]);
   const [teamManager, setTeamManager] = useState<TeamMate | null>(null);
+  const [teamName, setTeamName] = useState<string | null>(null);
   const [timeEntries, setTimeEntries] = useState<any[]>([]);
   const [_loadingEntries, setLoadingEntries] = useState(false);
 
@@ -69,13 +73,16 @@ export default function EpitimeDashboard() {
         if (!res.ok) {
           setTeam([]);
           setTeamManager(null);
+          setTeamName(null);
           return;
         }
         setTeam(Array.isArray(data?.members) ? data.members : []);
         setTeamManager(data?.manager || null);
+        setTeamName(data?.team_name || null);
       } catch {
         setTeam([]);
         setTeamManager(null);
+        setTeamName(null);
       }
     };
 
@@ -191,6 +198,8 @@ export default function EpitimeDashboard() {
   const [mode, setMode] = useState<"daily" | "weekly">("daily");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedMate, setSelectedMate] = useState<any>(null);
+  const [selectedMateTasks, setSelectedMateTasks] = useState<TaskType[]>([]);
+  const [loadingMateTasks, setLoadingMateTasks] = useState(false);
   const [showTable, setShowTable] = useState(false);
 
   // Calculate daily data (hourly breakdown for today)
@@ -279,19 +288,104 @@ export default function EpitimeDashboard() {
   const workDaysWithData = weeklyChartData.filter(d => d.hours > 0).length;
   const averageHours = workDaysWithData > 0 ? (totalHours / workDaysWithData).toFixed(1) : "0.0";
 
-  // Calculate punctuality and late arrivals
+  // Load tasks for selected teammate when drawer opens
+  useEffect(() => {
+    const loadMateTasks = async () => {
+      if (!selectedMate || !drawerOpen) {
+        setSelectedMateTasks([]);
+        return;
+      }
+      setLoadingMateTasks(true);
+      try {
+        const res = await fetchWithAuth(`${API_URL}/api/users/tasks/`);
+        const data = await res.json();
+        if (res.ok && Array.isArray(data)) {
+          // Filter tasks assigned to or created by the selected teammate
+          const mateTasks = data.filter((task: any) =>
+            task.assigned_to === selectedMate.id || task.created_by === selectedMate.id
+          );
+          setSelectedMateTasks(mateTasks);
+        }
+      } catch {
+        setSelectedMateTasks([]);
+      } finally {
+        setLoadingMateTasks(false);
+      }
+    };
+    loadMateTasks();
+  }, [selectedMate, drawerOpen, API_URL]);
 
+  // Add task to selected colleague
+  const handleAddTaskToMate = async () => {
+    if (!quickTask.trim() || !selectedMate) return;
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${API_URL}/api/users/tasks/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          title: quickTask,
+          priority: taskPriority,
+          estimated_duration: 1,
+          assigned_to: selectedMate.id,
+        }),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setSelectedMateTasks((prev) => [created, ...prev]);
+        setTasks((prev) => [created, ...prev]);
+        setQuickTask("");
+        setTaskPriority("medium"); // Reset priority
+      }
+    } catch {
+      // Failed to add task
+    }
+  };
 
-  const displayTeam = useMemo(() => {
-    const list: TeamMate[] = [];
-    if (teamManager) list.push(teamManager); // 👈 manager clickable
-    return list.concat(team); // 👈 other members
-  }, [teamManager, team]);
-
-  // Drawer form states - mocked for UI
+  // Drawer form states
   const [meetingDate, setMeetingDate] = useState("");
   const [meetingTime, setMeetingTime] = useState("");
   const [quickTask, setQuickTask] = useState("");
+  const [taskPriority, setTaskPriority] = useState<"low" | "medium" | "high">("medium");
+
+  // Task detail modal
+  const [taskDetailOpen, setTaskDetailOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<TaskType | null>(null);
+  const [showArchivedTasks, setShowArchivedTasks] = useState(false);
+
+  // Update task progress
+  const handleUpdateProgress = async (taskId: number, newProgress: number) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${API_URL}/api/users/tasks/${taskId}/`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ progress: newProgress }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+        setSelectedMateTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+        if (selectedTask?.id === taskId) {
+          setSelectedTask(updated);
+        }
+      }
+    } catch {
+      // Failed to update
+    }
+  };
+
+  // Complete/Archive task (set progress to 100)
+  const handleCompleteTask = async (taskId: number) => {
+    await handleUpdateProgress(taskId, 100);
+    setTaskDetailOpen(false);
+  };
 
   return (
     <div className="min-h-screen bg-[#123A8A] text-white flex flex-col items-center py-10">
@@ -424,90 +518,169 @@ export default function EpitimeDashboard() {
 
       {/* Team Section */}
       <div className="bg-[#0F2658] rounded-2xl shadow-lg p-6 w-[90%] max-w-6xl mb-10">
-        <h2 className="text-xl font-bold mb-2 lowercase">my team</h2>
-        {teamManager && (
-          <div className="text-sm text-slate-300 mb-6">
-            Manager: <span className="text-yellow-300 font-semibold">{teamManager.full_name}</span>
-          </div>
-        )}
-
-        <div className="grid md:grid-cols-2 gap-6">
-          {displayTeam.length === 0 ? (
-            <div className="text-slate-300">
-              No manager assigned yet (ask an admin to assign you to a manager).
-            </div>
-          ) : (
-            displayTeam.map((tm) => (
-              <button
-                key={`tm-${tm.id}`}
-                onClick={() => {
-                  setSelectedMate(tm);
-                  setDrawerOpen(true);
-                }}
-                className="flex justify-between items-center bg-slate-800/60 px-4 py-3 rounded-full hover:bg-slate-700 border border-slate-600 hover:border-cyan-400 text-white w-full"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-500" />
-                  <div className="text-left">
-                    <div className="font-semibold text-sm">
-                      {tm.full_name}
-                      {teamManager && tm.id === teamManager.id && (
-                        <span className="ml-2 text-xs text-yellow-300 font-semibold">
-                          (Manager)
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-slate-300">{tm.role}</div>
-                  </div>
-                </div>
-
-                {/* Status dot (manager can still have one, optional but fine) */}
-                <span
-                  className={`w-3 h-3 rounded-full ${tm.today_status === "pto"
-                    ? "bg-yellow-400"
-                    : tm.today_status === "late"
-                      ? "bg-red-500"
-                      : tm.is_clocked_in
-                        ? "bg-green-500"
-                        : "bg-slate-400"
-                    }`}
-                />
-              </button>
-            ))
+        {/* Team Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <h2 className="text-xl font-bold">my team</h2>
+          {teamName && (
+            <span className="px-3 py-1 bg-cyan-400/20 text-cyan-400 rounded-full text-sm font-medium">
+              {teamName}
+            </span>
           )}
         </div>
 
+        {!teamName && !teamManager && team.length === 0 ? (
+          <div className="text-slate-300 text-center py-8">
+            <p>You are not assigned to a team yet.</p>
+            <p className="text-sm text-slate-400 mt-2">Ask an admin to assign you to a team.</p>
+          </div>
+        ) : (
+          <>
+            {/* Manager Section */}
+            {teamManager && (
+              <div className="mb-6">
+                <div className="text-xs uppercase text-slate-400 mb-2">Manager</div>
+                <button
+                  onClick={() => {
+                    setSelectedMate(teamManager);
+                    setDrawerOpen(true);
+                  }}
+                  className="flex justify-between items-center bg-gradient-to-r from-yellow-500/20 to-amber-500/10 px-4 py-3 rounded-xl hover:from-yellow-500/30 hover:to-amber-500/20 border border-yellow-500/30 hover:border-yellow-400 text-white w-full md:w-auto md:min-w-[300px] transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center text-slate-900 font-bold">
+                      {teamManager.full_name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="text-left">
+                      <div className="font-semibold">{teamManager.full_name}</div>
+                      <div className="text-xs text-yellow-300/70">Manager</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-3 h-3 rounded-full ${teamManager.today_status === "pto"
+                        ? "bg-yellow-400"
+                        : teamManager.today_status === "late"
+                          ? "bg-red-500"
+                          : teamManager.is_clocked_in
+                            ? "bg-green-500"
+                            : "bg-slate-400"
+                        }`}
+                    />
+                    <span className="text-xs text-slate-300">
+                      {teamManager.is_clocked_in ? "Online" : "Offline"}
+                    </span>
+                  </div>
+                </button>
+              </div>
+            )}
 
+            {/* Collaborators Section */}
+            {team.length > 0 && (
+              <div>
+                <div className="text-xs uppercase text-slate-400 mb-3">
+                  Collaborators ({team.length})
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {team.map((tm) => (
+                    <button
+                      key={`tm-${tm.id}`}
+                      onClick={() => {
+                        setSelectedMate(tm);
+                        setDrawerOpen(true);
+                      }}
+                      className="flex justify-between items-center bg-slate-800/60 px-4 py-3 rounded-xl hover:bg-slate-700 border border-slate-600 hover:border-cyan-400 text-white w-full transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-600 flex items-center justify-center text-slate-300 font-semibold">
+                          {tm.full_name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="text-left">
+                          <div className="font-semibold text-sm">{tm.full_name}</div>
+                          <div className="text-xs text-slate-400 capitalize">{tm.role}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`w-3 h-3 rounded-full ${tm.today_status === "pto"
+                            ? "bg-yellow-400"
+                            : tm.today_status === "late"
+                              ? "bg-red-500"
+                              : tm.is_clocked_in
+                                ? "bg-green-500"
+                                : "bg-slate-400"
+                            }`}
+                        />
+                        <span className="text-xs text-slate-400">
+                          {tm.today_status === "pto"
+                            ? "PTO"
+                            : tm.is_clocked_in
+                              ? "Online"
+                              : "Offline"}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Status Legend */}
+            <div className="flex gap-4 mt-6 text-xs text-slate-400 justify-center">
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-green-500" />
+                <span>Online</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+                <span>Offline</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-yellow-400" />
+                <span>PTO</span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Tasks Section */}
       <div className="bg-[#0F2658] rounded-2xl shadow-lg p-6 w-[90%] max-w-6xl">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold lowercase">project tasks overview</h2>
-          <Button
+          <h2 className="text-xl font-bold">project tasks overview</h2>
+          <button
             onClick={() => setShowTaskModal(true)}
-            className="flex items-center gap-2 rounded-full bg-cyan-400 text-slate-900 border-none hover:bg-cyan-300"
-            variant="primary"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold shadow-lg hover:shadow-cyan-400/25 hover:scale-105 transition-all duration-200"
           >
-            <Plus size={18} aria-hidden="true" />
-            Create Task
-          </Button>
+            <Plus size={20} aria-hidden="true" />
+            <span>Create Task</span>
+          </button>
         </div>
 
-        {tasks.length === 0 ? (
-          <div className="text-center text-slate-400 py-8">
-            No tasks yet. Click "Create Task" to add your first task!
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-3 gap-6">
-            {tasks.map((t: TaskType) => (
-              <div
-                key={t.id}
-                className="bg-slate-800/60 rounded-xl p-4 border border-slate-700 hover:border-cyan-400 transition"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-sm flex-1">{t.title}</h4>
-                  <div className="flex items-center gap-2">
+        {(() => {
+          // Filter out completed tasks (progress === 100)
+          const activeTasks = tasks.filter((t) => t.progress < 100);
+
+          if (activeTasks.length === 0) {
+            return (
+              <div className="text-center text-slate-400 py-8">
+                No active tasks. Click "Create Task" to add a new task!
+              </div>
+            );
+          }
+
+          return (
+            <div className="grid md:grid-cols-3 gap-6">
+              {activeTasks.map((t: TaskType) => (
+                <button
+                  key={t.id}
+                  onClick={() => {
+                    setSelectedTask(t);
+                    setTaskDetailOpen(true);
+                  }}
+                  className="bg-slate-800/60 rounded-xl p-4 border border-slate-700 hover:border-cyan-400 transition text-left w-full"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-sm flex-1">{t.title}</h4>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full capitalize ${t.priority === "high"
                         ? "bg-red-500/80"
@@ -518,34 +691,119 @@ export default function EpitimeDashboard() {
                     >
                       {t.priority}
                     </span>
-                    <button
-                      onClick={() => handleDeleteTask(t.id)}
-                      className="p-1 rounded-lg hover:bg-red-500/20 text-red-400 hover:text-red-300 transition"
-                      title="Delete task"
-                      aria-label={`Delete task: ${t.title}`}
+                  </div>
+                  <div className="text-xs text-cyan-400 mb-1">
+                    Created by: {t.created_by_name || "Me"}
+                  </div>
+                  <div className="text-xs text-slate-400 mb-2">
+                    Assigned to: {t.assigned_to_name || "Me"}
+                  </div>
+                  <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-2 bg-cyan-400" style={{ width: `${t.progress}%` }} />
+                  </div>
+                  <div className="flex justify-between mt-2 text-xs text-slate-400">
+                    <span>{t.progress}% done</span>
+                    {t.due_date && <span>Due {new Date(t.due_date).toLocaleDateString()}</span>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          );
+        })()}
+
+        {/* Archived Tasks Toggle */}
+        {(() => {
+          const completedTasks = tasks.filter((t) => t.progress === 100);
+          if (completedTasks.length === 0) return null;
+
+          return (
+            <div className="mt-8">
+              <button
+                onClick={() => setShowArchivedTasks(!showArchivedTasks)}
+                className="text-sm text-slate-400 hover:text-white transition flex items-center gap-2"
+              >
+                <span>{showArchivedTasks ? "▼" : "▶"}</span>
+                <span>Archived Tasks ({completedTasks.length})</span>
+              </button>
+
+              {showArchivedTasks && (
+                <div className="grid md:grid-cols-3 gap-4 mt-4">
+                  {completedTasks.map((t: TaskType) => (
+                    <div
+                      key={t.id}
+                      className="bg-slate-800/40 rounded-xl p-4 border border-slate-700/50"
                     >
-                      <Trash2 size={16} />
-                    </button>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium text-sm flex-1 line-through text-slate-400">{t.title}</h4>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/80">
+                          Complete
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-400 mb-3">
+                        Created by: {t.created_by_name || "Me"}
+                      </div>
+                      <button
+                        onClick={() => handleUpdateProgress(t.id, 0)}
+                        className="w-full text-xs px-3 py-2 rounded-lg bg-cyan-400/20 text-cyan-400 hover:bg-cyan-400/30 transition"
+                      >
+                        ↩ Restore to Active
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Assigned to Me Section - Tasks assigned by others */}
+      {(() => {
+        const assignedToMe = tasks.filter(
+          (t) => t.assigned_to === user?.id && t.created_by !== user?.id
+        );
+        if (assignedToMe.length === 0) return null;
+        return (
+          <div className="bg-[#0F2658] rounded-2xl shadow-lg p-6 w-[90%] max-w-6xl mt-10">
+            <h2 className="text-xl font-bold mb-6">tasks assigned to me</h2>
+            <div className="grid md:grid-cols-3 gap-6">
+              {assignedToMe.map((t: TaskType) => (
+                <div
+                  key={t.id}
+                  className="bg-slate-800/60 rounded-xl p-4 border border-slate-700 hover:border-cyan-400 transition"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-sm flex-1">{t.title}</h4>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full capitalize ${t.priority === "high"
+                        ? "bg-red-500/80"
+                        : t.priority === "medium"
+                          ? "bg-yellow-500/80"
+                          : "bg-green-500/80"
+                        }`}
+                    >
+                      {t.priority}
+                    </span>
+                  </div>
+                  <div className="text-xs text-cyan-400 mb-2">
+                    Assigned by: {t.created_by_name || "Unknown"}
+                  </div>
+                  <div className="text-xs text-slate-400 mb-2">
+                    Duration: {t.estimated_duration}h
+                  </div>
+                  <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-2 bg-cyan-400" style={{ width: `${t.progress}%` }} />
+                  </div>
+                  <div className="flex justify-between mt-2 text-xs text-slate-400">
+                    <span>{t.progress}% done</span>
+                    {t.due_date && <span>Due {new Date(t.due_date).toLocaleString()}</span>}
                   </div>
                 </div>
-                <div className="text-xs text-slate-300 mb-2">
-                  Assigned to: {t.assigned_to_name || "Me"}
-                </div>
-                <div className="text-xs text-slate-400 mb-2">
-                  Duration: {t.estimated_duration}h
-                </div>
-                <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-                  <div className="h-2 bg-cyan-400" style={{ width: `${t.progress}%` }} />
-                </div>
-                <div className="flex justify-between mt-2 text-xs text-slate-400">
-                  <span>{t.progress}% done</span>
-                  {t.due_date && <span>Due {new Date(t.due_date).toLocaleString()}</span>}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        )}
-      </div>
+        );
+      })()}
 
       {/* Drawer */}
       <AnimatePresence>
@@ -557,23 +815,128 @@ export default function EpitimeDashboard() {
             transition={{ type: "spring", stiffness: 160, damping: 20 }}
             className="fixed right-0 top-0 h-full w-[90vw] sm:w-[420px] bg-slate-900 text-slate-100 shadow-2xl z-50 overflow-y-auto"
           >
-            <div className="p-6 border-b border-white/10 flex items-center justify-between">
-              <div>
-                <div className="text-xs uppercase text-slate-400">teammate</div>
-                <div className="text-xl font-semibold">{selectedMate?.full_name}</div>
-                <div className="text-slate-400 text-sm">{selectedMate?.role}</div>
+            <div className="p-6 border-b border-white/10">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-slate-900 font-bold text-xl">
+                    {selectedMate?.full_name?.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="text-xl font-semibold">{selectedMate?.full_name}</div>
+                    <div className="text-slate-400 text-sm capitalize">{selectedMate?.role}</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setDrawerOpen(false)}
+                  className="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600"
+                  aria-label="Close details"
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                onClick={() => setDrawerOpen(false)}
-                className="px-3 py-1 rounded-lg bg-slate-700 hover:bg-slate-600"
-                aria-label="Close details"
-              >
-                ✕
-              </button>
+
+              {/* Status Badge */}
+              <div className="mt-4 flex items-center gap-2">
+                <span
+                  className={`w-3 h-3 rounded-full ${selectedMate?.today_status === "pto"
+                    ? "bg-yellow-400"
+                    : selectedMate?.today_status === "late"
+                      ? "bg-red-500"
+                      : selectedMate?.is_clocked_in
+                        ? "bg-green-500"
+                        : "bg-slate-400"
+                    }`}
+                />
+                <span className="text-sm">
+                  {selectedMate?.today_status === "pto"
+                    ? "On PTO today"
+                    : selectedMate?.today_status === "late"
+                      ? "Arrived late today"
+                      : selectedMate?.is_clocked_in
+                        ? "Currently online"
+                        : "Currently offline"}
+                </span>
+              </div>
             </div>
 
-            <div className="p-6 space-y-8">
+            <div className="p-6 space-y-6">
+              {/* Add Task Section */}
               <div>
+                <h3 className="text-sm mb-3 text-slate-300 font-medium">Assign a task</h3>
+                <div className="space-y-3">
+                  <Input
+                    id="quick-task"
+                    label="Title"
+                    value={quickTask}
+                    onChange={setQuickTask}
+                    placeholder="Task title..."
+                  />
+                  <div>
+                    <label htmlFor="task-priority-drawer" className="block text-sm text-slate-300 mb-1">
+                      Priority
+                    </label>
+                    <select
+                      id="task-priority-drawer"
+                      value={taskPriority}
+                      onChange={(e) => setTaskPriority(e.target.value as "low" | "medium" | "high")}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-cyan-400 focus:outline-none"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+                  <Button
+                    className="w-full rounded-xl bg-emerald-400 text-slate-900 border-none hover:bg-emerald-300"
+                    onClick={handleAddTaskToMate}
+                    disabled={!quickTask.trim()}
+                  >
+                    Add Task
+                  </Button>
+                </div>
+              </div>
+
+              {/* Colleague's Tasks */}
+              <div>
+                <h3 className="text-sm mb-3 text-slate-300 font-medium">
+                  {selectedMate?.full_name}'s Tasks ({selectedMateTasks.length})
+                </h3>
+                {loadingMateTasks ? (
+                  <div className="text-center text-slate-400 py-4">Loading tasks...</div>
+                ) : selectedMateTasks.length === 0 ? (
+                  <div className="text-center text-slate-400 py-4">No tasks assigned yet</div>
+                ) : (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {selectedMateTasks.map((task) => (
+                      <div
+                        key={task.id}
+                        className="bg-slate-800/60 rounded-xl px-3 py-2 border border-slate-700"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium text-sm">{task.title}</div>
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full capitalize ${task.priority === "high"
+                              ? "bg-red-500/80"
+                              : task.priority === "medium"
+                                ? "bg-yellow-500/80"
+                                : "bg-green-500/80"
+                              }`}
+                          >
+                            {task.priority}
+                          </span>
+                        </div>
+                        <div className="flex justify-between mt-1 text-xs text-slate-400">
+                          <span>{task.progress}% done</span>
+                          <span>{task.estimated_duration}h</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Book Meeting */}
+              <div className="border-t border-white/10 pt-6">
                 <h3 className="text-sm mb-3 text-slate-300 font-medium">Book a meeting</h3>
                 <div className="space-y-3">
                   <Input
@@ -599,49 +962,8 @@ export default function EpitimeDashboard() {
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-sm mb-3 text-slate-300 font-medium">Add quick task</h3>
-                <div className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <Input
-                      id="quick-task"
-                      label="Title"
-                      value={quickTask}
-                      onChange={setQuickTask}
-                      placeholder="Task title..."
-                    />
-                  </div>
-                  <Button
-                    className="rounded-xl bg-emerald-400 text-slate-900 border-none hover:bg-emerald-300 mb-[2px]"
-                    onClick={() => { }}
-                  >
-                    Add
-                  </Button>
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm mb-3 text-slate-300">Today's schedule</div>
-                <div className="space-y-2">
-                  {[
-                    { time: "09:00", title: "Daily stand-up" },
-                    { time: "11:00", title: "Code review" },
-                    { time: "14:30", title: "Sprint planning" },
-                  ].map((event, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-3 bg-slate-800/60 rounded-xl px-3 py-2 border border-slate-700"
-                    >
-                      <div className="text-xs text-slate-300 w-16">{event.time}</div>
-                      <div className="text-sm">{event.title}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* --- START A CHAT BUTTON --- */}
-              <div className="p-6 border-t border-white/10 mt-6">
-                <div className="text-sm mb-3 text-slate-300">Start a chat</div>
+              {/* Start a Chat */}
+              <div className="border-t border-white/10 pt-6">
                 <Button
                   onClick={() => navigate("/chat")}
                   className="w-full bg-cyan-400 hover:bg-cyan-300 text-slate-900 border-none"
@@ -711,6 +1033,102 @@ export default function EpitimeDashboard() {
             Create Task
           </Button>
         </div>
+      </Modal>
+
+      {/* Task Detail Modal */}
+      <Modal
+        isOpen={taskDetailOpen}
+        onClose={() => setTaskDetailOpen(false)}
+        title="Task Details"
+      >
+        {selectedTask && (
+          <div className="space-y-6">
+            {/* Task Header */}
+            <div>
+              <h3 className="text-xl font-semibold text-white mb-2">{selectedTask.title}</h3>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full capitalize ${selectedTask.priority === "high"
+                    ? "bg-red-500/80"
+                    : selectedTask.priority === "medium"
+                      ? "bg-yellow-500/80"
+                      : "bg-green-500/80"
+                    }`}
+                >
+                  {selectedTask.priority} priority
+                </span>
+              </div>
+            </div>
+
+            {/* Task Info */}
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Created by:</span>
+                <span className="text-cyan-400">{selectedTask.created_by_name || "Me"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Assigned to:</span>
+                <span className="text-white">{selectedTask.assigned_to_name || "Me"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Duration:</span>
+                <span className="text-white">{selectedTask.estimated_duration}h</span>
+              </div>
+              {selectedTask.due_date && (
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Due date:</span>
+                  <span className="text-white">{new Date(selectedTask.due_date).toLocaleDateString()}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Progress Section */}
+            <div>
+              <div className="flex justify-between mb-2">
+                <span className="text-sm text-slate-300">Progress</span>
+                <span className="text-sm text-cyan-400">{selectedTask.progress}%</span>
+              </div>
+              <div className="w-full h-3 bg-slate-700 rounded-full overflow-hidden mb-4">
+                <div className="h-3 bg-cyan-400 transition-all" style={{ width: `${selectedTask.progress}%` }} />
+              </div>
+
+              {/* Progress Buttons */}
+              <div className="flex gap-2 justify-center">
+                {[0, 25, 50, 75, 100].map((progress) => (
+                  <button
+                    key={progress}
+                    onClick={() => handleUpdateProgress(selectedTask.id, progress)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${selectedTask.progress === progress
+                      ? "bg-cyan-400 text-slate-900"
+                      : "bg-slate-700 text-white hover:bg-slate-600"
+                      }`}
+                  >
+                    {progress}%
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4 border-t border-slate-700">
+              <Button
+                onClick={() => handleCompleteTask(selectedTask.id)}
+                className="flex-1 bg-green-500 hover:bg-green-400 text-white border-none"
+              >
+                ✓ Mark Complete
+              </Button>
+              <Button
+                onClick={() => {
+                  handleDeleteTask(selectedTask.id);
+                  setTaskDetailOpen(false);
+                }}
+                className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/50"
+              >
+                Delete Task
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

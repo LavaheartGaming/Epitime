@@ -493,68 +493,67 @@ class MyTeamView(APIView):
     def get(self, request):
         today = timezone.localdate()
 
-        # Case 1: Manager -> their team is the users assigned to them
-        # Case 1: Manager / Admin
-        if request.user.role in ["manager", "admin"]:
-            # If manager has a team, show that team
-            if request.user.team:
-                users_qs = User.objects.filter(team=request.user.team).exclude(id=request.user.id)
-                manager_info = {
-                    "id": request.user.team.id,
-                    "full_name": request.user.team.name,
-                    "email": "",
-                    "role": "Team",
-                }
-            else:
-                users_qs = User.objects.none()
-                manager_info = None
+        # Check if user has a team
+        if not request.user.team_id:
+            return Response({
+                "team_name": None,
+                "team_id": None,
+                "manager": None,
+                "members": []
+            })
 
-        # Case 2: Normal user -> team is everyone with the same manager
-        # Case 2: Normal user or Manager -> team is everyone in the same team
+        team = request.user.team
+        
+        # Get all team members except current user
+        all_team_users = User.objects.filter(team=team).exclude(id=request.user.id)
+        
+        # Find the manager (user with role="manager" in this team)
+        manager_user = all_team_users.filter(role="manager").first()
+        
+        # Get regular members (exclude manager)
+        if manager_user:
+            members_qs = all_team_users.exclude(id=manager_user.id).order_by("last_name", "first_name")
         else:
-            if not request.user.team_id:
-                return Response({"manager": None, "members": []})
-
-            team = request.user.team
-            users_qs = User.objects.filter(team=team).exclude(id=request.user.id)
-
-            # We don't have a single "manager" anymore, but we can return team info
-            manager_info = {
-                "id": team.id,
-                "full_name": team.name,  # Using team name as "manager name" or refactor frontend
-                "email": "",
-                "role": "Team",
-            }
-
-        users_qs = users_qs.order_by("last_name", "first_name")
+            members_qs = all_team_users.order_by("last_name", "first_name")
 
         # open sessions = clocked in
-        open_entries = TimeEntry.objects.filter(user__in=users_qs, clock_out__isnull=True)
+        all_users_to_check = list(members_qs)
+        if manager_user:
+            all_users_to_check.append(manager_user)
+        
+        open_entries = TimeEntry.objects.filter(user__in=all_users_to_check, clock_out__isnull=True)
         open_map = {e.user_id: e for e in open_entries}
 
         # today's status
-        status_qs = TeamStatus.objects.filter(user__in=users_qs, date=today)
+        status_qs = TeamStatus.objects.filter(user__in=all_users_to_check, date=today)
         status_map = {s.user_id: s for s in status_qs}
 
-        members = []
-        for u in users_qs:
+        def build_user_info(u):
             open_entry = open_map.get(u.id)
             status_obj = status_map.get(u.id)
+            return {
+                "id": u.id,
+                "full_name": u.full_name,
+                "email": u.email,
+                "role": u.role,
+                "is_clocked_in": bool(open_entry),
+                "open_clock_in": open_entry.clock_in.isoformat() if open_entry else None,
+                "today_status": status_obj.status if status_obj else "normal",
+                "today_status_note": status_obj.note if status_obj else "",
+            }
 
-            members.append(
-                {
-                    "id": u.id,
-                    "full_name": u.full_name,
-                    "email": u.email,
-                    "role": u.role,
-                    "is_clocked_in": bool(open_entry),
-                    "open_clock_in": open_entry.clock_in.isoformat() if open_entry else None,
-                    "today_status": status_obj.status if status_obj else "normal",
-                    "today_status_note": status_obj.note if status_obj else "",
-                }
-            )
+        # Build manager info
+        manager_info = build_user_info(manager_user) if manager_user else None
 
-        return Response({"manager": manager_info, "members": members})
+        # Build members list
+        members = [build_user_info(u) for u in members_qs]
+
+        return Response({
+            "team_name": team.name,
+            "team_id": team.id,
+            "manager": manager_info,
+            "members": members
+        })
 
 
 # ---- Task Views for Users ----
