@@ -8,12 +8,25 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import (Conversation, Message, Task, Team, TeamStatus, TimeEntry,
-                     User, WorkingHours)
-from .serializers import (ConversationSerializer, MessageSerializer,
-                          TaskSerializer, TeamStatusSerializer,
-                          TimeEntrySerializer, UserSerializer,
-                          WorkingHoursSerializer)
+from .models import (
+    Conversation,
+    Message,
+    Task,
+    Team,
+    TeamStatus,
+    TimeEntry,
+    User,
+    WorkingHours,
+)
+from .serializers import (
+    ConversationSerializer,
+    MessageSerializer,
+    TaskSerializer,
+    TeamStatusSerializer,
+    TimeEntrySerializer,
+    UserSerializer,
+    WorkingHoursSerializer,
+)
 
 
 class TeamSerializer(serializers.ModelSerializer):
@@ -493,7 +506,7 @@ class TeamDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 # ---- Admin: Assign User to Team ----
-# ---- Admin/Manager: Assign User to Team ----
+    # ---- Admin/Manager: Assign User to Team ----
 class AdminAssignTeamView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated, IsManagerOrAdmin]
@@ -506,19 +519,19 @@ class AdminAssignTeamView(APIView):
             return Response({"error": "user_id is required"}, status=400)
 
         target = get_object_or_404(User, id=user_id)
-        
+
         # Validation for Managers
         if request.user.role == "manager":
             # Can only operate on their own team
             if not request.user.team:
                 return Response({"error": "You do not have a team to manage."}, status=403)
-            
+
             # If removing (team_id is None)
             if team_id is None:
                 # Can only remove if user is currently in their team
                 if target.team != request.user.team:
                     return Response({"error": "Cannot remove user from another team."}, status=403)
-            
+
             # If adding (team_id is set)
             else:
                 # Can only add to their own team
@@ -573,13 +586,13 @@ class MyTeamView(APIView):
             })
 
         team = request.user.team
-        
+
         # Get all team members except current user
         all_team_users = User.objects.filter(team=team).exclude(id=request.user.id)
-        
+
         # Find the manager (user with role="manager" in this team)
         manager_user = all_team_users.filter(role="manager").first()
-        
+
         # Get regular members (exclude manager)
         if manager_user:
             members_qs = all_team_users.exclude(id=manager_user.id).order_by("last_name", "first_name")
@@ -590,7 +603,7 @@ class MyTeamView(APIView):
         all_users_to_check = list(members_qs)
         if manager_user:
             all_users_to_check.append(manager_user)
-        
+
         open_entries = TimeEntry.objects.filter(user__in=all_users_to_check, clock_out__isnull=True)
         open_map = {e.user_id: e for e in open_entries}
 
@@ -790,7 +803,7 @@ class TeamReportsView(APIView):
         elif request.user.role == "manager":
             if request.user.team:
                 users_qs = User.objects.filter(team=request.user.team)
-                # Optionally exclude self if manager shouldn't see their own stats here, 
+                # Optionally exclude self if manager shouldn't see their own stats here,
                 # but usually managers want to see everyone in the team.
             else:
                 users_qs = User.objects.none()
@@ -825,8 +838,8 @@ class TeamReportsView(APIView):
 
             # Lateness Month
             lates_month = TeamStatus.objects.filter(
-                user=user, 
-                status='late', 
+                user=user,
+                status='late',
                 date__gte=start_of_month
             ).count()
 
@@ -870,7 +883,7 @@ class ConversationListCreateView(APIView):
             is_direct=is_direct,
         )
         conversation.participants.add(request.user)
-        
+
         if participant_ids:
             users = User.objects.filter(id__in=participant_ids)
             conversation.participants.add(*users)
@@ -886,7 +899,7 @@ class ConversationMessagesView(APIView):
 
     def get(self, request, conversation_id):
         conversation = get_object_or_404(Conversation, id=conversation_id)
-        
+
         if not conversation.participants.filter(id=request.user.id).exists():
             return Response({"error": "Not a participant"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -896,7 +909,7 @@ class ConversationMessagesView(APIView):
 
     def post(self, request, conversation_id):
         conversation = get_object_or_404(Conversation, id=conversation_id)
-        
+
         if not conversation.participants.filter(id=request.user.id).exists():
             return Response({"error": "Not a participant"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -926,7 +939,7 @@ class TeamConversationView(APIView):
 
         team = request.user.team
         conversation = Conversation.objects.filter(team=team, is_direct=False).first()
-        
+
         if not conversation:
             conversation = Conversation.objects.create(
                 name=team.name,
@@ -950,12 +963,12 @@ class StartDirectConversationView(APIView):
 
     def post(self, request):
         target_user_id = request.data.get("user_id")
-        
+
         if not target_user_id:
             return Response({"error": "user_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         target_user = get_object_or_404(User, id=target_user_id)
-        
+
         if target_user.id == request.user.id:
             return Response({"error": "Cannot chat with yourself"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -987,7 +1000,7 @@ class MessageDetailView(APIView):
 
     def put(self, request, message_id):
         message = get_object_or_404(Message, id=message_id)
-        
+
         if message.sender.id != request.user.id:
             return Response({"error": "Cannot edit others' messages"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -1003,7 +1016,7 @@ class MessageDetailView(APIView):
 
     def delete(self, request, message_id):
         message = get_object_or_404(Message, id=message_id)
-        
+
         if message.sender.id != request.user.id:
             return Response({"error": "Cannot delete others' messages"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -1018,7 +1031,7 @@ class ConversationDetailView(APIView):
 
     def delete(self, request, conversation_id):
         conversation = get_object_or_404(Conversation, id=conversation_id)
-        
+
         if not conversation.participants.filter(id=request.user.id).exists():
             return Response({"error": "Not a participant"}, status=status.HTTP_403_FORBIDDEN)
 

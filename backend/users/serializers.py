@@ -110,6 +110,7 @@ class WorkingHoursSerializer(serializers.ModelSerializer):
 from .models import Conversation, Message
 
 
+
 class MessageSerializer(serializers.ModelSerializer):
     sender_name = serializers.SerializerMethodField()
     sender_id = serializers.IntegerField(source="sender.id", read_only=True)

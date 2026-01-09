@@ -87,9 +87,14 @@ class TestMyViews:
         url = reverse("my-team")
         response = api_client.get(url)
         assert response.status_code == status.HTTP_200_OK
-        # Team endpoint returns team info, not manager info
+        # Team endpoint returns team info
         assert response.data["team"]["id"] == team.id if "team" in response.data else True
-        assert len(response.data["members"]) >= 2  # user, teammate, and manager
+        # Logic change: Manager is separated, so members list contains only teammates (excluding self and manager)
+        # We have: user (self), manager (manager), teammate.
+        # members = [teammate] -> count 1
+        assert len(response.data["members"]) == 1
+        if "manager" in response.data and response.data["manager"]:
+            assert response.data["manager"]["email"] == manager.email
 
     def test_my_team_as_manager(self, api_client, user, manager):
         """GET /api/users/me/team/ - Manager sees their team"""
