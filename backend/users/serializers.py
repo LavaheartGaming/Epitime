@@ -104,3 +104,44 @@ class WorkingHoursSerializer(serializers.ModelSerializer):
         model = WorkingHours
         fields = ["id", "day_of_week", "day_name", "start_time", "end_time"]
         read_only_fields = ["id"]
+
+
+# Chat Serializers
+from .models import Conversation, Message
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.SerializerMethodField()
+    sender_id = serializers.IntegerField(source="sender.id", read_only=True)
+
+    class Meta:
+        model = Message
+        fields = ["id", "conversation", "sender", "sender_id", "sender_name", "content", "created_at"]
+        read_only_fields = ["sender", "created_at"]
+
+    def get_sender_name(self, obj):
+        return obj.sender.full_name if obj.sender else "Unknown"
+
+
+class ConversationSerializer(serializers.ModelSerializer):
+    last_message = serializers.SerializerMethodField()
+    participant_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Conversation
+        fields = ["id", "name", "team", "is_direct", "last_message", "participant_count", "created_at", "updated_at"]
+        read_only_fields = ["created_at", "updated_at"]
+
+    def get_last_message(self, obj):
+        last = obj.messages.order_by("-created_at").first()
+        if last:
+            return {
+                "content": last.content[:50] + "..." if len(last.content) > 50 else last.content,
+                "sender_name": last.sender.full_name,
+                "created_at": last.created_at.isoformat(),
+            }
+        return None
+
+    def get_participant_count(self, obj):
+        return obj.participants.count()
+

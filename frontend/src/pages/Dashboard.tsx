@@ -860,6 +860,17 @@ export default function EpitimeDashboard() {
             </div>
 
             <div className="p-6 space-y-6">
+              {/* Start Chat Button */}
+              <button
+                onClick={() => {
+                  setDrawerOpen(false);
+                  navigate(`/chat?userId=${selectedMate?.id}`);
+                }}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-semibold hover:shadow-lg hover:shadow-cyan-400/20 transition flex items-center justify-center gap-2"
+              >
+                💬 Start Chat with {selectedMate?.full_name?.split(" ")[0]}
+              </button>
+
               {/* Add Task Section */}
               <div>
                 <h3 className="text-sm mb-3 text-slate-300 font-medium">Assign a task</h3>
