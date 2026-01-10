@@ -81,11 +81,10 @@ const Home: React.FC = () => {
           className="mt-16 flex justify-center"
         >
           <img
-            src="https://cdn-icons-png.flaticon.com/512/2103/2103691.png"
+            src="/logo_epitime.png"
             alt="Epitime Logo"
             width={250}
-            height={250}
-            className="drop-shadow-2xl"
+            className="drop-shadow-2xl h-auto object-contain"
           />
         </motion.div>
       </section>

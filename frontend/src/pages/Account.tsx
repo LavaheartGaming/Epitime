@@ -112,9 +112,9 @@ export default function AccountPage() {
       <div className="max-w-2xl mx-auto bg-blue-950/60 p-8 rounded-2xl shadow-2xl border border-blue-700/40 backdrop-blur-xl">
         <div className="text-center mb-8">
           <img
-            src="https://cdn-icons-png.flaticon.com/512/2103/2103691.png"
+            src="/logo_epitime.png"
             alt="Epitime"
-            className="w-20 mx-auto mb-4"
+            className="w-20 mx-auto mb-4 object-contain"
           />
           <h1 className="text-3xl font-bold text-yellow-400 mb-2">
             Hello, {user?.full_name} 👋
