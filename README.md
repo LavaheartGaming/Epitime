@@ -1,8 +1,7 @@
 # Epitime
 
-**Epitime** — Time Manager Project from Epitech  
-This repository contains a full-stack time management application developed as a project for Epitech.  
-It features a **frontend**, a **backend**, and uses **Docker Compose** for easy development and deployment.
+**Epitime** — Enterprise Time Management & Team Collaboration Platform  
+A comprehensive full-stack time management application developed as part of the Epitech curriculum. This project provides advanced time tracking, team management, task assignment, and real-time communication features through a modern web interface backed by a robust REST API.
 
 ---
 

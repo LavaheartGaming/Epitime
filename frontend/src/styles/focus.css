@@ -1,0 +1,53 @@
+/* Indicateurs de focus visibles - WCAG 2.1 Success Criterion 2.4.7 */
+
+/* Focus visible pour tous les éléments interactifs */
+*:focus-visible {
+    outline: 3px solid var(--border-focus, #0066CC);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* Supprimer l'outline par défaut (remplacé par :focus-visible) */
+*:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Skip to main content link */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--primary, #0066CC);
+    color: white;
+    padding: 8px 16px;
+    text-decoration: none;
+    z-index: 100;
+    font-weight: 600;
+    border-radius: 0 0 4px 0;
+}
+
+.skip-link:focus {
+    top: 0;
+}
+
+/* Focus pour les boutons */
+button:focus-visible,
+a:focus-visible {
+    outline: 3px solid var(--border-focus, #0066CC);
+    outline-offset: 2px;
+}
+
+/* Focus pour les inputs */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+    outline: 3px solid var(--border-focus, #0066CC);
+    outline-offset: 1px;
+    border-color: var(--border-focus, #0066CC);
+}
+
+/* Indicateur de focus pour les éléments personnalisés */
+[tabindex]:focus-visible {
+    outline: 3px solid var(--border-focus, #0066CC);
+    outline-offset: 2px;
+}

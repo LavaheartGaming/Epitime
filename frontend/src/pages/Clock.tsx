@@ -23,6 +23,9 @@ export function ClockDashboard() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Signature state
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+
   // Helper to call API with JWT
   const fetchWithAuth = async (url: string, method = "GET", body?: any) => {
     const token = localStorage.getItem("access_token");
@@ -71,8 +74,7 @@ export function ClockDashboard() {
         Array.isArray(data) && data.some((e: any) => e.clock_in && !e.clock_out);
 
       setIsClockedIn(hasOpenSession);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setErrorMessage("⚠️ Server unreachable.");
       setRecords([]);
       setIsClockedIn(false);
@@ -87,11 +89,22 @@ export function ClockDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Open modal instead of direct clock in
   const handleClockIn = async () => {
+    setShowSignatureModal(true);
+  };
+
+  // Called when signature is confirmed
+  const confirmClockIn = async (sig: string) => {
+    setShowSignatureModal(false);
     setErrorMessage(null);
+    setLoading(true);
 
     try {
-      const res = await fetchWithAuth(`${API_URL}/api/users/clock-in/`, "POST");
+      // Pass signature data if backend supports it (optional)
+      const res = await fetchWithAuth(`${API_URL}/api/users/clock-in/`, "POST", {
+        signature: sig
+      });
       const data = await res.json();
 
       if (res.ok) {
@@ -104,9 +117,10 @@ export function ClockDashboard() {
       } else {
         setErrorMessage(data.error || "❌ Could not clock in.");
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       setErrorMessage("⚠️ Server unreachable.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -127,8 +141,7 @@ export function ClockDashboard() {
       } else {
         setErrorMessage(data.error || "❌ Could not clock out.");
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
       setErrorMessage("⚠️ Server unreachable.");
     }
   };
@@ -196,11 +209,10 @@ export function ClockDashboard() {
           <button
             onClick={handleClockIn}
             disabled={loading || isClockedIn}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-lg font-semibold transition-all ${
-              loading || isClockedIn
-                ? "bg-slate-700 text-slate-400 cursor-not-allowed"
-                : "bg-emerald-400 text-slate-900 hover:bg-emerald-300"
-            }`}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-lg font-semibold transition-all ${loading || isClockedIn
+              ? "bg-slate-700 text-slate-400 cursor-not-allowed"
+              : "bg-emerald-400 text-slate-900 hover:bg-emerald-300"
+              }`}
           >
             <LogIn className="w-5 h-5" /> Clock In
           </button>
@@ -208,11 +220,10 @@ export function ClockDashboard() {
           <button
             onClick={handleClockOut}
             disabled={loading || !isClockedIn}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-lg font-semibold transition-all ${
-              loading || !isClockedIn
-                ? "bg-slate-700 text-slate-400 cursor-not-allowed"
-                : "bg-red-400 text-slate-900 hover:bg-red-300"
-            }`}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-lg font-semibold transition-all ${loading || !isClockedIn
+              ? "bg-slate-700 text-slate-400 cursor-not-allowed"
+              : "bg-red-400 text-slate-900 hover:bg-red-300"
+              }`}
           >
             <LogOut className="w-5 h-5" /> Clock Out
           </button>
@@ -224,13 +235,12 @@ export function ClockDashboard() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="grid md:grid-cols-4 gap-6 mt-10 w-full max-w-5xl text-center"
+        className="grid md:grid-cols-3 gap-6 mt-10 w-full max-w-5xl text-center"
       >
         {[
           { label: "Total Hours", value: `${totalHours}h`, color: "text-cyan-400" },
           { label: "Average", value: `${averageHours}h`, color: "text-cyan-400" },
           { label: "Sessions Logged", value: records.length, color: "text-green-400" },
-          { label: "Punctuality", value: "96%", color: "text-yellow-400" }, // placeholder
         ].map((s, i) => (
           <div
             key={i}
@@ -281,8 +291,140 @@ export function ClockDashboard() {
           </table>
         </motion.div>
       )}
+
+      {/* Signature Modal */}
+      {showSignatureModal && (
+        <SignatureModal
+          onConfirm={confirmClockIn}
+          onCancel={() => setShowSignatureModal(false)}
+        />
+      )}
     </div>
   );
 }
+
+// Simple Signature Canvas Component
+const SignatureModal = ({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: (signatureData: string) => void;
+  onCancel: () => void;
+}) => {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#000000";
+
+    const getPos = (e: MouseEvent | TouchEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = "touches" in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+      const clientY = "touches" in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top,
+      };
+    };
+
+    const startDrawing = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault();
+      setIsDrawing(true);
+      const { x, y } = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    };
+
+    const draw = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault();
+      if (!isDrawing) return;
+      const { x, y } = getPos(e);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    };
+
+    const stopDrawing = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault();
+      setIsDrawing(false);
+      ctx.beginPath();
+    };
+
+    canvas.addEventListener("mousedown", startDrawing as any);
+    canvas.addEventListener("mousemove", draw as any);
+    canvas.addEventListener("mouseup", stopDrawing as any);
+    canvas.addEventListener("touchstart", startDrawing as any);
+    canvas.addEventListener("touchmove", draw as any);
+    canvas.addEventListener("touchend", stopDrawing as any);
+
+    return () => {
+      canvas.removeEventListener("mousedown", startDrawing as any);
+      canvas.removeEventListener("mousemove", draw as any);
+      canvas.removeEventListener("mouseup", stopDrawing as any);
+      canvas.removeEventListener("touchstart", startDrawing as any);
+      canvas.removeEventListener("touchmove", draw as any);
+      canvas.removeEventListener("touchend", stopDrawing as any);
+    };
+  }, [isDrawing]);
+
+  const handleClear = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      ctx?.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  };
+
+  const handleConfirm = () => {
+    if (canvasRef.current) {
+      onConfirm(canvasRef.current.toDataURL());
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md text-gray-900 shadow-2xl">
+        <h3 className="text-xl font-bold mb-4 text-center">Sign to Clock In</h3>
+        <div className="border-2 border-dashed border-gray-300 rounded-xl mb-4 bg-gray-50 touch-none">
+          <canvas
+            ref={canvasRef}
+            width={350}
+            height={200}
+            className="w-full h-48 cursor-crosshair"
+          />
+        </div>
+        <div className="flex justify-between gap-4">
+          <button
+            onClick={handleClear}
+            className="text-sm text-gray-500 hover:text-red-500 font-semibold"
+          >
+            Clear
+          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 font-semibold transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirm}
+              className="px-4 py-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 font-bold transition shadow-lg"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default ClockDashboard;

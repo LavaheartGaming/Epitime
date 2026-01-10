@@ -1,0 +1,112 @@
+/* Modal accessible styles - Dark Theme */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background-color: #1e293b;
+    /* slate-800 */
+    border-radius: 16px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.modal-close {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #94a3b8;
+    /* slate-400 */
+    padding: 8px;
+    min-width: 36px;
+    min-height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.modal-body {
+    padding: 24px;
+    color: #e2e8f0;
+    /* slate-200 */
+}
+
+/* Input styling in modal */
+.modal-body input,
+.modal-body select,
+.modal-body textarea {
+    background-color: #0f172a;
+    /* slate-900 */
+    border: 1px solid #334155;
+    /* slate-700 */
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 10px 16px;
+}
+
+.modal-body input:focus,
+.modal-body select:focus,
+.modal-body textarea:focus {
+    border-color: #22d3ee;
+    /* cyan-400 */
+    outline: none;
+}
+
+.modal-body label {
+    color: #cbd5e1;
+    /* slate-300 */
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .modal-content {
+        border: 3px solid #ffffff;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+
+    .modal-overlay,
+    .modal-content {
+        animation: none;
+    }
+}

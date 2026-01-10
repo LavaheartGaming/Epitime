@@ -7,22 +7,57 @@ export interface User {
   role: string;
   phone_number: string;
   two_factor_enabled?: boolean;
+  team_id?: number | null;
 }
 
 interface AuthContextType {
   user: User | null;
+  loading: boolean;
   login: (userData: User) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const checkAuth = async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/users/me/`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      } else {
+        // Token invalid or expired
+        logout();
+      }
+    } catch {
+      // Network error or other issue
+      logout();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) setUser(JSON.parse(storedUser));
+    checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = (userData: User) => {
@@ -32,11 +67,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     localStorage.removeItem("user");
+    localStorage.removeItem("access_token");
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
