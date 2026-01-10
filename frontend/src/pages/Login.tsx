@@ -124,11 +124,9 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-blue-950/60 rounded-2xl p-8 shadow-2xl border border-blue-700/50 backdrop-blur-xl">
         <div className="flex justify-center mb-6">
           <img
-            src="https://cdn-icons-png.flaticon.com/512/2103/2103691.png"
+            src="/logo_epitime.png"
             alt="Epitime Logo"
-            width={80}
-            height={80}
-            className="w-20 h-20"
+            className="w-20 h-auto object-contain"
           />
         </div>
 
