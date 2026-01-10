@@ -1,0 +1,48 @@
+services:
+  db:
+    image: mariadb:11
+    container_name: epitime-db-prod
+    restart: always
+    env_file:
+      - .env
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-epitime}
+    volumes:
+      - mariadb_data_prod:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -h localhost -u${DB_USER:-root} -p${MARIADB_ROOT_PASSWORD:-root} || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: epitime-backend-prod
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - static_volume:/app/static
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: epitime-frontend-prod
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - static_volume:/app/static
+    depends_on:
+      - backend
+
+volumes:
+  mariadb_data_prod:
+  static_volume:

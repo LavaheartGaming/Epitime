@@ -30,9 +30,9 @@ const Navbar: React.FC = () => {
         {/* LOGO */}
         <div className="flex items-center gap-3">
           <img
-            src="https://cdn-icons-png.flaticon.com/512/2103/2103691.png"
+            src="/logo_epitime.png"
             alt="Epitime Logo"
-            className="rounded-md w-10 h-10"
+            className="rounded-md w-16 h-auto object-contain"
           />
           <Link
             to="/home"
@@ -48,11 +48,10 @@ const Navbar: React.FC = () => {
             <Link
               key={item.name}
               to={item.href}
-              className={`font-medium text-sm tracking-wide transition-all ${
-                location.pathname === item.href
+              className={`font-medium text-sm tracking-wide transition-all ${location.pathname === item.href
                   ? "text-yellow-400 border-b-2 border-yellow-400 pb-1"
                   : "text-white hover:text-yellow-300"
-              }`}
+                }`}
             >
               {item.name}
             </Link>
@@ -87,11 +86,10 @@ const Navbar: React.FC = () => {
               key={item.name}
               to={item.href}
               onClick={() => setIsMenuOpen(false)}
-              className={`block py-2 text-lg transition-all ${
-                location.pathname === item.href
+              className={`block py-2 text-lg transition-all ${location.pathname === item.href
                   ? "text-yellow-400 font-semibold"
                   : "text-white hover:text-yellow-300"
-              }`}
+                }`}
             >
               {item.name}
             </Link>
